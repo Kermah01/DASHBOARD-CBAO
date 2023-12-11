@@ -7,7 +7,6 @@ matplotlib
 openpyxl
 scipy
 joblib
-time
 streamlit-extras
 nltk
 wordcloud
