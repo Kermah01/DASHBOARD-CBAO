@@ -1,0 +1,16 @@
+scikit-learn
+pandas
+numpy
+streamlit
+seaborn
+matplotlib
+openpyxl
+scipy
+joblib
+time
+streamlit-extras
+nltk
+wordcloud
+regex
+unidecode
+streamlit-gsheets
