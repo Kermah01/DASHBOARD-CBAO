@@ -1,12 +1,7 @@
-import streamlit_authenticator as stauth
 import streamlit as st
-import yaml
-from yaml.loader import SafeLoader
 from CBAO_Dash import dashboard_users
 st.set_page_config(layout="wide")
 
-with open(r"C:\config.yaml") as file:
-    config = yaml.load(file, Loader=SafeLoader)
 
 page_bg_img = f"""
 <style>
