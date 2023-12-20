@@ -61,18 +61,31 @@ def dashboard_users(user_zone):
     dic_month={1:"Janvier",2:"Février",3:"Mars",4:"Avril",5:"Mai",6:"Juin",7:"Juillet",8:"Août",9:"Septembre",10:"Octobre",11:"Novembre",12:"Décembre"}
     order_of_days = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi']
 
-  
+    
     def transf_df(df):
         #df['Horodateur'] = df['Horodateur'].astype(str).replace(':00', '')
+
         df['Horodateur']= pd.to_datetime(df['Horodateur'],format="%d/%m/%Y %H:%M", errors='coerce')
         df["Mois"] = df["Horodateur"].dt.month
         df["Jour"] = df["Horodateur"].dt.day_of_week
         df["heure"]=df["Horodateur"].dt.hour
+        df["Année"]=df["Horodateur"].dt.year
         df["Mois"]=df["Mois"].map(dic_month)
         df["Mois*"] = pd.Categorical(df["Mois"], categories=order_of_months, ordered=True)
         df["Jour"]=df["Jour"].map({0:"Lundi",1:"Mardi",2:"Mercredi",3:"Jeudi",4:"Vendredi",5:"Samedi",6:"Dimanche"})
         df["Jour*"] = pd.Categorical(df["Jour"], categories=order_of_days, ordered=True)
+        order_of_months_year = []
+        start_year = df['Année'].min()
+        end_year = df['Année'].max()
+        for year in range(start_year, end_year + 1):
+            for month in order_of_months:
+                order_of_months_year.append(f"{month} {year}")
+
+        df["Mois de l'année"] = df['Mois*'].astype("str") + ' ' + df['Année'].astype("str")
+        df["Mois de l'année"] = pd.Categorical(df["Mois de l'année"], categories=order_of_months_year, ordered=True)
+        
         return df
+    
     df=transf_df(df)
 
     def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -86,6 +99,7 @@ def dashboard_users(user_zone):
             pd.DataFrame: Filtered dataframe
         """
         modify = st.checkbox("AJOUTEZ UN FILTRE")
+        
 
         if not modify:
             return df
@@ -110,28 +124,22 @@ def dashboard_users(user_zone):
             for column in to_filter_columns:
                 left, right = st.columns((1, 20))
                 # Treat columns with < 10 unique values as categorical
-                if is_categorical_dtype(df[column]) or df[column].nunique() < 10:
-                    user_cat_input = right.multiselect(
-                        f"Values for {column}",
-                        df[column].unique(),
-                        default=list(df[column].unique()),
-                    )
-                    df = df[df[column].isin(user_cat_input)]
-                elif is_numeric_dtype(df[column]):
-                    _min = float(df[column].min())
-                    _max = float(df[column].max())
-                    step = (_max - _min) / 100
+                int_columns = df.select_dtypes(include="int").columns
+                float_columns = df.select_dtypes(include="float").columns
+
+                if is_numeric_dtype(df[column]) :
+                    _min = int(df[column].min())
+                    _max = int(df[column].max())
                     user_num_input = right.slider(
-                        f"Values for {column}",
+                        f"Valeurs de {column}",
                         min_value=_min,
                         max_value=_max,
                         value=(_min, _max),
-                        step=step,
                     )
                     df = df[df[column].between(*user_num_input)]
                 elif is_datetime64_any_dtype(df[column]):
                     user_date_input = right.date_input(
-                        f"Values for {column}",
+                        f"Valeur de {column}",
                         value=(
                             df[column].min(),
                             df[column].max(),
@@ -141,6 +149,15 @@ def dashboard_users(user_zone):
                         user_date_input = tuple(map(pd.to_datetime, user_date_input))
                         start_date, end_date = user_date_input
                         df = df.loc[df[column].between(start_date, end_date)]
+                elif is_categorical_dtype(df[column]) or df[column].unique().shape[0]<100:
+                    arr=df[column].unique()
+                    user_cat_input = right.multiselect(
+                        f"Valueur de {column}",
+                        arr
+                        ,
+                        default=list(arr),
+                    )
+                    df = df[df[column].isin(user_cat_input)]
                 else:
                     user_text_input = right.text_input(
                         f"Substring or regex in {column}",
@@ -219,7 +236,10 @@ def dashboard_users(user_zone):
     acc_selected=pec_selected=''
 
     st.sidebar.subheader("PARAMETRES DES VARIATIONS DES KPI")
-
+    st.title("KPI annuels")
+    year=st.selectbox("Sélectionner l'année sur laquelle vous souhaitez réaliser votre analyse", np.sort(df['Année'].unique())[::-1],index=0)
+    df_transitoire=df.copy()
+    df=df[df['Année']==year]
     nbre_quest=st.sidebar.checkbox('Nombre total des questionnaires')
     if nbre_quest:
         dec_temp=st.sidebar.select_slider(":grey[***Choisissez le décalage temporel (en mois)***]", options=df["Mois*"].unique().sort_values(ascending=True), value=df["Mois*"].unique().sort_values(ascending=False)[1])
@@ -242,45 +262,53 @@ def dashboard_users(user_zone):
         else: 
             new_norm2=st.sidebar.number_input(":grey[***Entrez la nouvelle norme***  ]", min_value=1, max_value=5, value=4)
 
-
-
+    
+    st.header(f"***KPI sur l'année {year}***",divider ="rainbow" )
     with st.container():    
         col1, col2, col3 = st.columns(3)
-        col1.metric("Total des questionnaires reçus", df.shape[0],df.shape[0]-df[df["Mois*"]<=dec_temp].shape[0])
+        col1.metric(f"Total des questionnaires soumis en {year}", df.shape[0],f"{df.shape[0]-df[df['Mois*']<=dec_temp].shape[0]} de plus par rapport au total en {dec_temp}", help= "Cliquez sur le bouton 'Nombre total de questionnaires' dans les paramètres pour personnaliser le delta")
+        aut_var=np.round(df["Note de l'accueil"].mean(),2)
         if acc_selected=='Modifier le décalage temporel':
-            col2.metric("Note moyenne de l'accueil", np.round(df["Note de l'accueil"].mean(),2), np.round(df["Note de l'accueil"].mean()-df[df["Mois*"]<=dec_temp1]["Note de l'accueil"].mean(),2))
+            va=np.round(df["Note de l'accueil"].mean()-df[df["Mois*"]<=dec_temp1]["Note de l'accueil"].mean(),2)
+            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{va} par rapport au mois de {dec_temp1}")
         elif acc_selected=='Modifier la norme':
-            col2.metric("Note moyenne de l'accueil", np.round(df["Note de l'accueil"].mean(),2), np.round(df["Note de l'accueil"].mean()-new_norm,2))
+            cal=np.round(df["Note de l'accueil"].mean()-new_norm,2)
+            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{cal} (pour une norme de {new_norm})")
         else:
-            col2.metric("Note moyenne de l'accueil", np.round(df["Note de l'accueil"].mean(),2), np.round(df["Note de l'accueil"].mean()-4,2))
+            cal2=np.round(df["Note de l'accueil"].mean()-4)
+            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{cal2} (pour une norme de 4)")
+        aut_var2=np.round(df["Note de la prise en charge"].mean(),2)
         if pec_selected=='Modifier le décalage temporel ':
-            col3.metric("Note moyenne de la prise en charge", np.round(df["Note de la prise en charge"].mean(),2), np.round(df["Note de la prise en charge"].mean()-df[df["Mois*"]<=dec_temp2]["Note de la prise en charge"].mean(),2))
+            va2=np.round(df[f"Note de la prise en charge en {year}"].mean()-df[df["Mois*"]<=dec_temp2]["Note de la prise en charge"].mean(),2)
+            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5", f"{va2} par rapport au mois de {dec_temp2}")
         elif pec_selected=='Modifier la norme ':
-            col3.metric("Note moyenne de la prise en charge", np.round(df["Note de la prise en charge"].mean(),2), np.round(df["Note de la prise en charge"].mean()-new_norm2,2))
+            cal3=np.round(df["Note de la prise en charge"].mean()-new_norm2,2)
+            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5", f"{cal3} (pour une norme de {new_norm2})")
         else:
-            col3.metric("Note moyenne de la prise en charge", np.round(df["Note de la prise en charge"].mean(),2), np.round(df["Note de la prise en charge"].mean()-4,2))
+            cal4=np.round(df["Note de la prise en charge"].mean()-4,2)
+            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5",f"{cal4} (pour une norme de 4)" )
 
         style_metric_cards(background_color='#0c0c0c',border_left_color="#f7a900",box_shadow=True)
 
-    def palmarès(feat_fil,month_sel, critère):
-        result_mois = df[df['Mois'] == month_sel].groupby([feat_fil])['Mois'].count().reset_index(name="Total sur le mois")
+    def palmarès(feat_fil,s,l, critère):
+        result_mois = df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])['Mois'].count().reset_index(name="Total sur le mois")
         result_zone = df.groupby([feat_fil])[feat_fil].count().reset_index(name="Total sur l'année")
-        result_mean_acc=df[df['Mois'] == month_sel].groupby([feat_fil])["Note de l'accueil"].mean().reset_index(name="Moy. de l'accueil")
-        result_mean_pec=df[df['Mois'] == month_sel].groupby([feat_fil])['Note de la prise en charge'].mean().reset_index(name="Moy. de la prise en charge")
+        result_mean_acc=df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])["Note de l'accueil"].mean().reset_index(name="Moy. de l'accueil")
+        result_mean_pec=df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])['Note de la prise en charge'].mean().reset_index(name="Moy. de la prise en charge")
         # Fusion des résultats dans un DataFrame
         if critère=="Total des questionnaires sur l'année":
-            d=pd.merge(result_mois, result_zone, on=feat_fil, how='left') 
+            d=pd.merge(result_mois, result_zone, on=feat_fil, how='right') 
             d.sort_values(by="Total sur l'année",inplace=True,ascending=False)
 
         elif critère=="Total des questionnaires sur le mois":
-            d=pd.merge(result_mois, result_zone, on=feat_fil, how='left') 
+            d=pd.merge(result_mois, result_zone, on=feat_fil, how='right') 
             d.sort_values(by='Total sur le mois',inplace=True,ascending=False)
 
         elif critère=="Moy. de l'accueil":
-            d=pd.merge(result_mois, result_mean_acc, on=feat_fil, how='left')
+            d=pd.merge(result_mois, result_mean_acc, on=feat_fil, how='right')
             d.sort_values(by=critère,inplace=True,ascending=False)
         else:
-            d=pd.merge(result_mois, result_mean_pec, on=feat_fil, how='left')
+            d=pd.merge(result_mois, result_mean_pec, on=feat_fil, how='right')
             d.sort_values(by=critère,inplace=True,ascending=False)
         
         return d
@@ -289,37 +317,39 @@ def dashboard_users(user_zone):
         df[index_col] = df.index + 1
         df[index_col] = df[index_col].apply(lambda x: f"{x}ème" if x > 1 else f"{x}er")
         return df.set_index(index_col)
-
-
-
-    selected_month = st.selectbox("Sélectionnez le mois",order_of_months)
+    st.write(" ")
+    st.title("KPI mensuels")
+    df=df_transitoire
+    default=df["Mois de l'année"].unique().sort_values(ascending=False)[0]
+    start_val, last_val=st.select_slider("Sélectionner l'intervalle d'analyse", options=df["Mois de l'année"].unique().sort_values(ascending=True), value=[default, default])
+    st.header((lambda x: f"Analyse des performances en {start_val}" if start_val == last_val else f"Analyse des performances entre {start_val} et {last_val}")(None),divider='rainbow')
     actu, palm,top=st.columns(3)
-
     with actu:
-        j=order_of_months[order_of_months.index(selected_month)-1]
-        st.subheader(f"Chiffres du mois actuel ({selected_month})",divider='rainbow')
-        st.metric("Nbre total de questionnaires",df[df['Mois']==selected_month].shape[0],df[df["Mois"]==selected_month].shape[0]-df[df['Mois']==j].shape[0])
-        def avis (months):
-            return int((df[df['Mois']==months]['Motifs de la note de l\'accueil'].count()+df[df['Mois']==months]['Motifs de la note de la prise en charge'].count())/2) 
-        suggestions = df[df['Mois']==selected_month]['Suggestions'].count()
-        st.metric("Nbre total d'avis",avis(selected_month),avis(selected_month)-avis(j))
-        st.metric("Nbre total de suggestions", suggestions,int(df[df['Mois']==selected_month]['Suggestions'].count()-df[df['Mois']==j]['Suggestions'].count()))
+        st.subheader("***KPI***", divider='rainbow')
+        vt=df[df["Mois de l'année"]==last_val].shape[0]-df[df['Mois']==start_val].shape[0]
+        st.metric("Nbre total de questionnaires",df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)].shape[0],f"{vt} quest. de plus entre {start_val} et {last_val}")
+        def avis (s,l):
+            return int((df[(df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l)]['Motifs de la note de l\'accueil'].count()+df[(df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l)]['Motifs de la note de la prise en charge'].count())/2) 
+        suggestions = df[df["Mois de l'année"].isin([start_val, last_val])]['Suggestions'].count()
+        st.metric("Nbre total d'avis",avis(start_val, last_val),f"{avis(last_val, last_val)-avis(start_val, start_val)} avis de plus entre {start_val} et {last_val}")
+        vt2= int(df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)]['Suggestions'].count()-df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)]['Suggestions'].count())
+        st.metric("Nbre total de suggestions", suggestions,f"{vt2} sugg. de plus entre {start_val} et {last_val}")
     mean_accueil=df["Note de l'accueil"].mean()
     #df["Nombre de questionnaires remplis par jour"]=mean_accueil[df["Jour"]].values
     with palm:
-        st.subheader("Classement par Zone",divider="rainbow")
+        st.subheader("***Classement par Zone***",divider="rainbow")
         critère=st.radio("Choisir le critère de classement", ["Total des questionnaires sur l'année", "Total des questionnaires sur le mois", "Moy. de l'accueil", "Moy. de la prise en charge"])
-        pa=palmarès('Zone',selected_month, critère)
+        pa=palmarès('Zone',start_val, last_val, critère)
         pa.reset_index(inplace=True, drop=True)
         st.dataframe(format_ranking_index(pa))
     with top:
-        st.subheader("Classement par agence",divider='rainbow')
+        st.subheader("***Classement par agence***",divider='rainbow')
         critère1=st.radio("Choisir le critère de classement ", ["Total des questionnaires sur l'année", "Total des questionnaires sur le mois", "Moy. de l'accueil", "Moy. de la prise en charge"])
-        tops=palmarès('Agence',selected_month, critère1)
+        tops=palmarès('Agence',start_val, last_val, critère1)
         tops.reset_index(inplace=True, drop=True)
         st.dataframe(format_ranking_index(tops))
 
-    st.subheader("BASE DE DONNEES PERSONNALISEE",divider="rainbow" )
+    st.header("Base de données personnalisée",divider="rainbow" )
     df_perso=filter_dataframe(df)
     st.dataframe(df_perso)
     st.sidebar.write("")
@@ -328,9 +358,12 @@ def dashboard_users(user_zone):
     df_selected=st.sidebar.radio("***:grey[Choisissez la base de données sur laquel vous souhaitez réaliser les graphiques]***",['Base de données locale', 'Base de données télechargée', 'Base de données personnalisée'])
     if df_selected=='Base de données téléchargée' and uploaded_file is not None:
         df=transf_df(df_uploaded)
-    if df_selected=='Base de données personnalisée':
+    elif df_selected=='Base de données personnalisée':
         df=transf_df(df_perso)
+    else:
+        df=df[df['Année']==year]
 
+    
     # Histogramme et Camembert sur la même ligne
     cam, hist = st.columns(2,gap='medium')
 
@@ -394,7 +427,7 @@ def dashboard_users(user_zone):
         st.sidebar.subheader("PARAMETRES DES GRAPHIQUES")
         type_graph=st.sidebar.radio("***:grey[Choisissez le type d'histogramme croisé]***", ['empilé','étalé'])
         if selected_variable_2 in ["Note de l'accueil","Note de la prise en charge"]:
-            fig_croisé = px.bar(df.groupby(selected_variable_1)[selected_variable_2].mean().reset_index(), x=selected_variable_1,y=selected_variable_2, color=selected_variable_2,barmode=barmode_selected(type_graph),color_continuous_scale=['red', 'yellow', 'green'])
+            fig_croisé = px.bar(df.groupby(selected_variable_1)[selected_variable_2].mean().reset_index(), x=selected_variable_1,y=selected_variable_2, color=selected_variable_2,barmode=barmode_selected(type_graph),color_continuous_scale=['red', 'yellow', 'green'],range_color=[0, 5])
         else:
             fig_croisé = px.bar(df, x=selected_variable_1, color=selected_variable_2,barmode=barmode_selected(type_graph),color_discrete_sequence= colors)
             
