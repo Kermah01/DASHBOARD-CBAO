@@ -3,10 +3,11 @@ from CBAO_Dash import dashboard_users
 st.set_page_config(layout="wide")
 
 
+
 page_bg_img = f"""
 <style>
 [data-testid="stAppViewContainer"] > .main {{
-background-image: url(https://imagizer.imageshack.com/img922/2972/3DeUrP.gif);
+background-image: url(https://i.ibb.co/Dkf4pYz/c4c29214-c614-4fab-af24-535c0f914889.gif);
 background-size: cover;
 background-position: center;
 background-repeat: no-repeat;
