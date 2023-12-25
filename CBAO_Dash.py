@@ -1,3 +1,4 @@
+#Importation des librairies (S'assurer de les avoir préalablement installées)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -21,19 +22,20 @@ from pandas.api.types import (
     is_numeric_dtype,
     is_object_dtype,
 )
+#Définition de la fonction dashboard users qui sera appelée dans la page d'accueil
 def dashboard_users(user_zone):
+    #Fonction permettant de se connecter à la base de données depuis google sheet
     def base_locale():
-        url= "https://docs.google.com/spreadsheets/d/1yy4k-xZCHWD4fxSkem8hQJ-nut3LyTh3J6-or7_8mRc/edit?hl=fr&pli=1#gid=0"
+        url= "https://docs.google.com/spreadsheets/d/1yy4k-xZCHWD4fxSkem8hQJ-nut3LyTh3J6-or7_8mRc/edit?hl=fr&pli=1#gid=1054476081"
         conn = st.connection("gsheets", type=GSheetsConnection)
         return conn.read(spreadsheet=url)
-    
+    #Limitation de la base de données en fonction du profil
     if user_zone=='cbao-qualité':
         df=base_locale()
     else:
         df=base_locale()[base_locale()['Zone']==user_zone]
     
-
-
+    #Fonction permettant d'importer la base de données dans un dataframe pandas
     def read_excel_file(file):
         data = load_workbook(file)
         datas = data.active
@@ -44,8 +46,10 @@ def dashboard_users(user_zone):
         donnees = donnees[1:]
         new_df = pd.DataFrame(donnees, columns=en_tetes)
         return new_df
-
+    #Logo CBAO sur la barre latérale
     st.sidebar.image('CBAO_GAWB_logo.jpg', use_column_width='always')
+
+    #Option permettant de télécharger un fichier excel à analyser
     uploaded_file = st.sidebar.file_uploader("Télécharger un fichier Excel", type=["xlsx"])
 
     # Vérifier si un fichier a été téléchargé
@@ -56,15 +60,23 @@ def dashboard_users(user_zone):
 
 
 
-    pec_agence=df.groupby('Agence')['Note de la prise en charge'].mean()
+    #Définition des ordres de mois et des jours
     order_of_months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
     dic_month={1:"Janvier",2:"Février",3:"Mars",4:"Avril",5:"Mai",6:"Juin",7:"Juillet",8:"Août",9:"Septembre",10:"Octobre",11:"Novembre",12:"Décembre"}
     order_of_days = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi']
+    dic_day={0:"Lundi",1:"Mardi",2:"Mercredi",3:"Jeudi",4:"Vendredi",5:"Samedi",6:"Dimanche"}
 
-    
+    # Fonction permettant de faire de décomposer l'horodateur en heures, jours, mois et années
+    def order_of_months_year(Année):
+        order_of_months_year = []
+        start_year = df[Année].min()
+        end_year = df[Année].max()
+        for year in range(start_year, end_year + 1):
+            for month in order_of_months:
+                order_of_months_year.append(f"{month} {year}")
+        return order_of_months_year
+
     def transf_df(df):
-        #df['Horodateur'] = df['Horodateur'].astype(str).replace(':00', '')
-
         df['Horodateur']= pd.to_datetime(df['Horodateur'],format="%d/%m/%Y %H:%M", errors='coerce')
         df["Mois"] = df["Horodateur"].dt.month
         df["Jour"] = df["Horodateur"].dt.day_of_week
@@ -72,22 +84,217 @@ def dashboard_users(user_zone):
         df["Année"]=df["Horodateur"].dt.year
         df["Mois"]=df["Mois"].map(dic_month)
         df["Mois*"] = pd.Categorical(df["Mois"], categories=order_of_months, ordered=True)
-        df["Jour"]=df["Jour"].map({0:"Lundi",1:"Mardi",2:"Mercredi",3:"Jeudi",4:"Vendredi",5:"Samedi",6:"Dimanche"})
+        df["Jour"]=df["Jour"].map(dic_day)
         df["Jour*"] = pd.Categorical(df["Jour"], categories=order_of_days, ordered=True)
-        order_of_months_year = []
-        start_year = df['Année'].min()
-        end_year = df['Année'].max()
-        for year in range(start_year, end_year + 1):
-            for month in order_of_months:
-                order_of_months_year.append(f"{month} {year}")
+
 
         df["Mois de l'année"] = df['Mois*'].astype("str") + ' ' + df['Année'].astype("str")
-        df["Mois de l'année"] = pd.Categorical(df["Mois de l'année"], categories=order_of_months_year, ordered=True)
+        df["Mois de l'année"] = pd.Categorical(df["Mois de l'année"], categories=order_of_months_year("Année"), ordered=True)
         
         return df
     
+    
+    #Fonction permettant de réaliser la base de données personnalisée
     df=transf_df(df)
 
+    
+
+    #Chargement de l'image en arrière plan et de la couleur de la barre latérale
+    page_bg_img = f"""
+    <style>
+    [data-testid="stAppViewContainer"] > .main {{
+    background-image: url(https://static.vecteezy.com/ti/vecteur-libre/p1/20530242-abstrait-arriere-plan-vague-doubler-violet-vague-colore-lignes-neon-lumiere-abstrait-fond-d-ecran-numerique-abstrait-3d-technologie-vague-effet-embrase-lignes-vague-arriere-plan-vectoriel.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: no-fixed;
+    height: 100vh;
+    margin: 0;
+    display: flex;
+
+    
+    }}
+    [data-testid="stSidebar"] {{
+        background-color: #000 !important;  /* Fond noir */
+        border: 2px solid #f7a900 !important;  /* Bordure rouge */
+        border-radius: 10px;  /* Coins arrondis */
+        margin-top: 0 px;  /* Ajuster la position vers le haut */
+        position: relative;
+        z-index: 1;  /* S'assurer que la barre latérale est au-dessus du contenu */
+        padding: 10px;
+    }}
+
+    [data-testid="stHeader"] {{
+    background: rgba(0, 0, 0, 0);
+    color: white;
+    }}
+
+    [data-testid="stToolbar"] {{
+    right: 2rem;
+    }}
+    </style>
+    """
+
+    st.markdown(
+        """
+        <style>
+            body {
+                color: white;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    #Choix des couleurs pour les graphiques
+    colors = px.colors.sequential.Rainbow_r
+    colors.extend(px.colors.sequential.Agsunset)
+    colors.extend(px.colors.sequential.Aggrnyl)
+   
+    # Section des KPI annuels
+
+    st.write("\n")
+    st.write("\n")
+
+    st.markdown(page_bg_img, unsafe_allow_html=True)
+
+    #Fixation du mois par rapport auquel on fixe le delta des KPI 
+    dec_temp1=dec_temp2=dec_temp=df["Mois*"].unique().sort_values(ascending=False)[1]
+
+    #Valeur abitraire donnée pour éviter des erreurs dans la suite
+    acc_selected=pec_selected=''
+    
+    #Assez trivial... L'idée est jute de pouvoir personnaliser les deltas des différents KPI
+    st.title("KPI annuels")
+    year=st.selectbox("Sélectionner l'année sur laquelle vous souhaitez réaliser votre analyse", np.sort(df['Année'].unique())[::-1],index=0)
+    #On stock notre dataframe complet dans une variable pour pouvoir l'utiliser au besoin
+    df_transitoire=df.copy()
+    # L'analyse se fait sur l'année choisie uniquement, on filtre donc le dataframe globale pour le ramener sur une seule année
+    df=df[df['Année']==year]
+
+    #Même process de personnalisation des deltas pour les KPI
+    st.sidebar.subheader("PARAMETRES DES VARIATIONS DES KPI")
+    nbre_quest=st.sidebar.checkbox('Nombre total des questionnaires')
+    if nbre_quest:
+        dec_temp=st.sidebar.select_slider(":grey[***Choisissez le décalage temporel (en mois)***]", options=df["Mois*"].unique().sort_values(ascending=True), value=df["Mois*"].unique().sort_values(ascending=False)[1])
+
+    moy_acc=st.sidebar.checkbox("Note moyenne de l'accueil") 
+    if moy_acc:
+        acc_selected=st.sidebar.radio(":grey[Modifiez le décalage temporel]", ['Modifier le décalage temporel', 'Modifier la norme'])
+        
+        if acc_selected=='Modifier le décalage temporel':
+            dec_temp1=st.sidebar.select_slider(":grey[***Choisissez le décalage temporel (en mois)*** ]", options=df["Mois*"].unique().sort_values(ascending=True), value=df["Mois*"].unique().sort_values(ascending=False)[1])
+
+        else: 
+            new_norm=st.sidebar.number_input(":grey[***entrez la nouvelle norme***]", min_value=1, max_value=5, value=4)
+
+    moy_pec=st.sidebar.checkbox("Note moyenne de la prise en charge")
+    if moy_pec:
+        pec_selected=st.sidebar.radio(":grey[Modifiez le décalage temporel]", ['Modifier le décalage temporel ', 'Modifier la norme '])
+        if pec_selected=='Modifier le décalage temporel ':
+            dec_temp2=st.sidebar.select_slider(":grey[***Choisissez le décalage temporel (en mois)***  ]", options=df["Mois*"].unique().sort_values(ascending=True), value=df["Mois*"].unique().sort_values(ascending=False)[1])
+        else: 
+            new_norm2=st.sidebar.number_input(":grey[***Entrez la nouvelle norme***  ]", min_value=1, max_value=5, value=4)
+
+    
+    st.header(f"***KPI sur l'année {year}***",divider ="rainbow" )
+    with st.container():    
+        col1, col2, col3 = st.columns(3)
+        col1.metric(f"Total des questionnaires soumis en {year}", df.shape[0],f"{df.shape[0]-df[df['Mois*']<=dec_temp].shape[0]} de plus par rapport au total en {dec_temp}", help= "Cliquez sur le bouton 'Nombre total de questionnaires' dans les paramètres pour personnaliser le delta")
+        aut_var=np.round(df["Note de l'accueil"].mean(),2)
+        if acc_selected=='Modifier le décalage temporel':
+            va=np.round(df["Note de l'accueil"].mean()-df[df["Mois*"]<=dec_temp1]["Note de l'accueil"].mean(),2)
+            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{va} par rapport au mois de {dec_temp1}")
+        elif acc_selected=='Modifier la norme':
+            cal=np.round(df["Note de l'accueil"].mean()-new_norm,2)
+            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{cal} (pour une norme de {new_norm})")
+        else:
+            cal2=np.round(df["Note de l'accueil"].mean()-4)
+            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{cal2} (pour une norme de 4)")
+        aut_var2=np.round(df["Note de la prise en charge"].mean(),2)
+        if pec_selected=='Modifier le décalage temporel ':
+            va2=np.round(df[f"Note de la prise en charge en {year}"].mean()-df[df["Mois*"]<=dec_temp2]["Note de la prise en charge"].mean(),2)
+            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5", f"{va2} par rapport au mois de {dec_temp2}")
+        elif pec_selected=='Modifier la norme ':
+            cal3=np.round(df["Note de la prise en charge"].mean()-new_norm2,2)
+            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5", f"{cal3} (pour une norme de {new_norm2})")
+        else:
+            cal4=np.round(df["Note de la prise en charge"].mean()-4,2)
+            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5",f"{cal4} (pour une norme de 4)" )
+
+        style_metric_cards(background_color='#0c0c0c',border_left_color="#f7a900",box_shadow=True)
+    
+    #SECTION KPI mensuels
+    #Fonction permettant de créer un dataframe contenant le classement par zone ou par agence en fonction d'un critère défini
+    def palmarès(feat_fil,s,l, critère):
+        result_mois = df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])['Mois'].count().reset_index(name="Total sur le mois")
+        result_zone = df.groupby([feat_fil])[feat_fil].count().reset_index(name="Total sur l'année")
+        result_mean_acc=df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])["Note de l'accueil"].mean().reset_index(name="Moy. de l'accueil")
+        result_mean_pec=df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])['Note de la prise en charge'].mean().reset_index(name="Moy. de la prise en charge")
+        # Fusion des résultats dans un DataFrame
+        if critère=="Total des questionnaires sur l'année":
+            d=pd.merge(result_mois, result_zone, on=feat_fil, how='right') 
+            d.sort_values(by="Total sur l'année",inplace=True,ascending=False)
+
+        elif critère=="Total des questionnaires sur le mois":
+            d=pd.merge(result_mois, result_zone, on=feat_fil, how='right') 
+            d.sort_values(by='Total sur le mois',inplace=True,ascending=False)
+
+        elif critère=="Moy. de l'accueil":
+            d=pd.merge(result_mois, result_mean_acc, on=feat_fil, how='right')
+            d.sort_values(by=critère,inplace=True,ascending=False)
+        else:
+            d=pd.merge(result_mois, result_mean_pec, on=feat_fil, how='right')
+            d.sort_values(by=critère,inplace=True,ascending=False)
+        
+        return d
+    #Fonction permettant d'ajouter "er", "ème" à la fin des indexs
+    def format_ranking_index(df, index_col='Position'):
+        df[index_col] = df.index + 1
+        df[index_col] = df[index_col].apply(lambda x: f"{x}ème" if x > 1 else f"{x}er")
+        return df.set_index(index_col)
+    
+    st.write(" ")
+    st.title("KPI mensuels")
+    #On revient au df initial pour élargir les analyses mensuelles
+    df=df_transitoire
+
+    #Mois par défaut sur lequel fixer le slider
+    default=df["Mois de l'année"].unique().sort_values(ascending=False)[0]
+
+    #Slider permettant de choisir une période à analyser 
+    start_val, last_val=st.select_slider("Sélectionner l'intervalle d'analyse", options=df["Mois de l'année"].unique().sort_values(ascending=True), value=[default, default])
+    st.header((lambda x: f"Analyse des performances en {start_val}" if start_val == last_val else f"Analyse des performances entre {start_val} et {last_val}")(None),divider='rainbow')
+    #On divise la page en trois colonnes: actu pour les KPI mensuels, palm pour classement par zone et top pour le classement par agence
+    actu, palm,top=st.columns(3)
+    with actu:
+        st.subheader("***KPI***", divider='rainbow')
+        vt=df[df["Mois de l'année"]==last_val].shape[0]-df[df['Mois']==start_val].shape[0]
+        st.metric("Nbre total de questionnaires",df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)].shape[0],f"{vt} quest. de plus entre {start_val} et {last_val}")
+        def avis (s,l):
+            return int((df[(df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l)]['Motifs de la note de l\'accueil'].count()+df[(df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l)]['Motifs de la note de la prise en charge'].count())/2) 
+        suggestions = df[df["Mois de l'année"].isin([start_val, last_val])]['Suggestions'].count()
+        st.metric("Nbre total d'avis",avis(start_val, last_val),f"{avis(last_val, last_val)-avis(start_val, start_val)} avis de plus entre {start_val} et {last_val}")
+        vt2= int(df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)]['Suggestions'].count()-df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)]['Suggestions'].count())
+        st.metric("Nbre total de suggestions", suggestions,f"{vt2} sugg. de plus entre {start_val} et {last_val}")
+
+    with palm:
+        st.subheader("***Classement par Zone***",divider="rainbow")
+        critère=st.radio("Choisir le critère de classement", ["Total des questionnaires sur l'année", "Total des questionnaires sur le mois", "Moy. de l'accueil", "Moy. de la prise en charge"])
+        pa=palmarès('Zone',start_val, last_val, critère)
+        pa.reset_index(inplace=True, drop=True)
+        st.dataframe(format_ranking_index(pa))
+
+    with top:
+        st.subheader("***Classement par agence***",divider='rainbow')
+        critère1=st.radio("Choisir le critère de classement ", ["Total des questionnaires sur l'année", "Total des questionnaires sur le mois", "Moy. de l'accueil", "Moy. de la prise en charge"])
+        tops=palmarès('Agence',start_val, last_val, critère1)
+        tops.reset_index(inplace=True, drop=True)
+        st.dataframe(format_ranking_index(tops))
+
+    #SECTION 3 Base de données personnalisée
+
+    st.header("Base de données personnalisée",divider="rainbow" )
     def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         """
         Adds a UI on top of a dataframe to let viewers filter columns
@@ -166,194 +373,13 @@ def dashboard_users(user_zone):
                         df = df[df[column].astype(str).str.contains(user_text_input)]
 
         return df
-
-
-    page_bg_img = f"""
-    <style>
-    [data-testid="stAppViewContainer"] > .main {{
-    background-image: url(https://static.vecteezy.com/ti/vecteur-libre/p1/20530242-abstrait-arriere-plan-vague-doubler-violet-vague-colore-lignes-neon-lumiere-abstrait-fond-d-ecran-numerique-abstrait-3d-technologie-vague-effet-embrase-lignes-vague-arriere-plan-vectoriel.jpg);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: no-fixed;
-    height: 100vh;
-    margin: 0;
-    display: flex;
-
-
-    }}
-    [data-testid="stSidebar"] {{
-        background-color: #000 !important;  /* Fond noir */
-        border: 2px solid #f7a900 !important;  /* Bordure rouge */
-        border-radius: 10px;  /* Coins arrondis */
-        margin-top: 0 px;  /* Ajuster la position vers le haut */
-        position: relative;
-        z-index: 1;  /* S'assurer que la barre latérale est au-dessus du contenu */
-        padding: 10px;
-    }}
-
-    [data-testid="stHeader"] {{
-    background: rgba(0, 0, 0, 0);
-    color: white;
-    }}
-
-    [data-testid="stToolbar"] {{
-    right: 2rem;
-    }}
-    </style>
-    """
-
-    st.markdown(
-        """
-        <style>
-            body {
-                color: white;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
     
-    colors = px.colors.sequential.Rainbow_r
-    colors.extend(px.colors.sequential.Agsunset)
-    colors.extend(px.colors.sequential.Aggrnyl)
-    # Section des graphiques sommaires
-
-
-
-
-
-
-    st.write("\n")
-    st.write("\n")
-
-    st.markdown(page_bg_img, unsafe_allow_html=True)
-
-    dec_temp1=dec_temp2=dec_temp=df["Mois*"].unique().sort_values(ascending=False)[1]
-
-
-    acc_selected=pec_selected=''
-
-    st.sidebar.subheader("PARAMETRES DES VARIATIONS DES KPI")
-    st.title("KPI annuels")
-    year=st.selectbox("Sélectionner l'année sur laquelle vous souhaitez réaliser votre analyse", np.sort(df['Année'].unique())[::-1],index=0)
-    df_transitoire=df.copy()
-    df=df[df['Année']==year]
-    nbre_quest=st.sidebar.checkbox('Nombre total des questionnaires')
-    if nbre_quest:
-        dec_temp=st.sidebar.select_slider(":grey[***Choisissez le décalage temporel (en mois)***]", options=df["Mois*"].unique().sort_values(ascending=True), value=df["Mois*"].unique().sort_values(ascending=False)[1])
-
-    moy_acc=st.sidebar.checkbox("Note moyenne de l'accueil") 
-    if moy_acc:
-        acc_selected=st.sidebar.radio(":grey[Modifiez le décalage temporel]", ['Modifier le décalage temporel', 'Modifier la norme'])
-        
-        if acc_selected=='Modifier le décalage temporel':
-            dec_temp1=st.sidebar.select_slider(":grey[***Choisissez le décalage temporel (en mois)*** ]", options=df["Mois*"].unique().sort_values(ascending=True), value=df["Mois*"].unique().sort_values(ascending=False)[1])
-
-        else: 
-            new_norm=st.sidebar.number_input(":grey[***entrez la nouvelle norme***]", min_value=1, max_value=5, value=4)
-
-    moy_pec=st.sidebar.checkbox("Note moyenne de la prise en charge")
-    if moy_pec:
-        pec_selected=st.sidebar.radio(":grey[Modifiez le décalage temporel]", ['Modifier le décalage temporel ', 'Modifier la norme '])
-        if pec_selected=='Modifier le décalage temporel ':
-            dec_temp2=st.sidebar.select_slider(":grey[***Choisissez le décalage temporel (en mois)***  ]", options=df["Mois*"].unique().sort_values(ascending=True), value=df["Mois*"].unique().sort_values(ascending=False)[1])
-        else: 
-            new_norm2=st.sidebar.number_input(":grey[***Entrez la nouvelle norme***  ]", min_value=1, max_value=5, value=4)
-
-    
-    st.header(f"***KPI sur l'année {year}***",divider ="rainbow" )
-    with st.container():    
-        col1, col2, col3 = st.columns(3)
-        col1.metric(f"Total des questionnaires soumis en {year}", df.shape[0],f"{df.shape[0]-df[df['Mois*']<=dec_temp].shape[0]} de plus par rapport au total en {dec_temp}", help= "Cliquez sur le bouton 'Nombre total de questionnaires' dans les paramètres pour personnaliser le delta")
-        aut_var=np.round(df["Note de l'accueil"].mean(),2)
-        if acc_selected=='Modifier le décalage temporel':
-            va=np.round(df["Note de l'accueil"].mean()-df[df["Mois*"]<=dec_temp1]["Note de l'accueil"].mean(),2)
-            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{va} par rapport au mois de {dec_temp1}")
-        elif acc_selected=='Modifier la norme':
-            cal=np.round(df["Note de l'accueil"].mean()-new_norm,2)
-            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{cal} (pour une norme de {new_norm})")
-        else:
-            cal2=np.round(df["Note de l'accueil"].mean()-4)
-            col2.metric(f"Note moyenne de l'accueil en {year}", f"{aut_var} / 5", f"{cal2} (pour une norme de 4)")
-        aut_var2=np.round(df["Note de la prise en charge"].mean(),2)
-        if pec_selected=='Modifier le décalage temporel ':
-            va2=np.round(df[f"Note de la prise en charge en {year}"].mean()-df[df["Mois*"]<=dec_temp2]["Note de la prise en charge"].mean(),2)
-            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5", f"{va2} par rapport au mois de {dec_temp2}")
-        elif pec_selected=='Modifier la norme ':
-            cal3=np.round(df["Note de la prise en charge"].mean()-new_norm2,2)
-            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5", f"{cal3} (pour une norme de {new_norm2})")
-        else:
-            cal4=np.round(df["Note de la prise en charge"].mean()-4,2)
-            col3.metric(f"Note moyenne de la prise en charge en {year}", f"{aut_var2} / 5",f"{cal4} (pour une norme de 4)" )
-
-        style_metric_cards(background_color='#0c0c0c',border_left_color="#f7a900",box_shadow=True)
-
-    def palmarès(feat_fil,s,l, critère):
-        result_mois = df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])['Mois'].count().reset_index(name="Total sur le mois")
-        result_zone = df.groupby([feat_fil])[feat_fil].count().reset_index(name="Total sur l'année")
-        result_mean_acc=df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])["Note de l'accueil"].mean().reset_index(name="Moy. de l'accueil")
-        result_mean_pec=df[((df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l))].groupby([feat_fil])['Note de la prise en charge'].mean().reset_index(name="Moy. de la prise en charge")
-        # Fusion des résultats dans un DataFrame
-        if critère=="Total des questionnaires sur l'année":
-            d=pd.merge(result_mois, result_zone, on=feat_fil, how='right') 
-            d.sort_values(by="Total sur l'année",inplace=True,ascending=False)
-
-        elif critère=="Total des questionnaires sur le mois":
-            d=pd.merge(result_mois, result_zone, on=feat_fil, how='right') 
-            d.sort_values(by='Total sur le mois',inplace=True,ascending=False)
-
-        elif critère=="Moy. de l'accueil":
-            d=pd.merge(result_mois, result_mean_acc, on=feat_fil, how='right')
-            d.sort_values(by=critère,inplace=True,ascending=False)
-        else:
-            d=pd.merge(result_mois, result_mean_pec, on=feat_fil, how='right')
-            d.sort_values(by=critère,inplace=True,ascending=False)
-        
-        return d
-
-    def format_ranking_index(df, index_col='Position'):
-        df[index_col] = df.index + 1
-        df[index_col] = df[index_col].apply(lambda x: f"{x}ème" if x > 1 else f"{x}er")
-        return df.set_index(index_col)
-    st.write(" ")
-    st.title("KPI mensuels")
-    df=df_transitoire
-    default=df["Mois de l'année"].unique().sort_values(ascending=False)[0]
-    start_val, last_val=st.select_slider("Sélectionner l'intervalle d'analyse", options=df["Mois de l'année"].unique().sort_values(ascending=True), value=[default, default])
-    st.header((lambda x: f"Analyse des performances en {start_val}" if start_val == last_val else f"Analyse des performances entre {start_val} et {last_val}")(None),divider='rainbow')
-    actu, palm,top=st.columns(3)
-    with actu:
-        st.subheader("***KPI***", divider='rainbow')
-        vt=df[df["Mois de l'année"]==last_val].shape[0]-df[df['Mois']==start_val].shape[0]
-        st.metric("Nbre total de questionnaires",df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)].shape[0],f"{vt} quest. de plus entre {start_val} et {last_val}")
-        def avis (s,l):
-            return int((df[(df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l)]['Motifs de la note de l\'accueil'].count()+df[(df["Mois de l'année"] >= s) & (df["Mois de l'année"] <= l)]['Motifs de la note de la prise en charge'].count())/2) 
-        suggestions = df[df["Mois de l'année"].isin([start_val, last_val])]['Suggestions'].count()
-        st.metric("Nbre total d'avis",avis(start_val, last_val),f"{avis(last_val, last_val)-avis(start_val, start_val)} avis de plus entre {start_val} et {last_val}")
-        vt2= int(df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)]['Suggestions'].count()-df[(df["Mois de l'année"] >= start_val) & (df["Mois de l'année"] <= last_val)]['Suggestions'].count())
-        st.metric("Nbre total de suggestions", suggestions,f"{vt2} sugg. de plus entre {start_val} et {last_val}")
-    mean_accueil=df["Note de l'accueil"].mean()
-    #df["Nombre de questionnaires remplis par jour"]=mean_accueil[df["Jour"]].values
-    with palm:
-        st.subheader("***Classement par Zone***",divider="rainbow")
-        critère=st.radio("Choisir le critère de classement", ["Total des questionnaires sur l'année", "Total des questionnaires sur le mois", "Moy. de l'accueil", "Moy. de la prise en charge"])
-        pa=palmarès('Zone',start_val, last_val, critère)
-        pa.reset_index(inplace=True, drop=True)
-        st.dataframe(format_ranking_index(pa))
-    with top:
-        st.subheader("***Classement par agence***",divider='rainbow')
-        critère1=st.radio("Choisir le critère de classement ", ["Total des questionnaires sur l'année", "Total des questionnaires sur le mois", "Moy. de l'accueil", "Moy. de la prise en charge"])
-        tops=palmarès('Agence',start_val, last_val, critère1)
-        tops.reset_index(inplace=True, drop=True)
-        st.dataframe(format_ranking_index(tops))
-
-    st.header("Base de données personnalisée",divider="rainbow" )
     df_perso=filter_dataframe(df)
     st.dataframe(df_perso)
     st.sidebar.write("")
     st.sidebar.write("")
+
+    #Option permettant de choisir la base sur laquelle l'on souhaite travailler
     st.sidebar.subheader("PARAMETRES DE LA BASE DE DONNEES")
     df_selected=st.sidebar.radio("***:grey[Choisissez la base de données sur laquel vous souhaitez réaliser les graphiques]***",['Base de données locale', 'Base de données télechargée', 'Base de données personnalisée'])
     if df_selected=='Base de données téléchargée' and uploaded_file is not None:
@@ -363,7 +389,11 @@ def dashboard_users(user_zone):
     else:
         df=df[df['Année']==year]
 
-    
+    # SECTION GRAPHIQUE
+    st.header("Analyses graphiques", divider="rainbow")
+
+    #Analyse univariée
+    st.subheader("Analyse graphique avec une seule variable")
     # Histogramme et Camembert sur la même ligne
     cam, hist = st.columns(2,gap='medium')
 
@@ -389,19 +419,10 @@ def dashboard_users(user_zone):
         st.plotly_chart(fig_histogram,use_container_width=True)
 
 
-
-
     # Section des analyses croisées
+    st.subheader("Analyse graphique avec deux variables croisées")
+    
 
-
-
-
-    def barmode_selected(t):
-        if t =='empilé':
-            a='relative'  
-        else: 
-            a='group'
-        return a
 
     quant,qual=st.columns(2,gap='medium')
 
@@ -419,6 +440,14 @@ def dashboard_users(user_zone):
         fig_scatter_matrix.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0.3)',},title_x=0.15)
         st.plotly_chart(fig_scatter_matrix, use_container_width=True)
     with qual:
+        #Type de l'histogramme croisé
+        def barmode_selected(t):
+            if t =='empilé':
+                a='relative'  
+            else: 
+                a='group'
+            return a
+        
         st.subheader("ANALYSE CROISEE ENTRE VARIABLES CATEGORIELLES")
         selected_variable_1 = st.selectbox("***Variable 1***", ['Agence', 'Point de contact','Jour','Mois','Zone'], index=4)
         selected_variable_2 = st.selectbox("***Variable 2***", ['Agence', 'Point de contact',"Note de la prise en charge","Note de l'accueil",'Jour','Mois','Zone'],index=1)
@@ -443,16 +472,18 @@ def dashboard_users(user_zone):
 
     occurences_day=df["Jour"].value_counts()
     df["Nombre de questionnaires remplis par jour"]=occurences_day[df["Jour"]].values
-    occurences_mo=df["Mois"].value_counts()
-    df["Nombre de questionnaires remplis dans le mois"]=occurences_mo[df["Mois"]].values
-    fig_ann = px.area(df, x="Mois*", y="Nombre de questionnaires remplis dans le mois", color="Jour*",line_group="Nombre de questionnaires remplis par jour",color_discrete_sequence= colors,custom_data=[df["Mois"],df["Jour"],df['Nombre de questionnaires remplis par jour'],df['Nombre de questionnaires remplis dans le mois']])
+    occurences_mo=df["Mois de l'année"].value_counts()
+    df["Nombre de questionnaires remplis dans le mois"]=occurences_mo[df["Mois de l'année"]].values
+    fig_ann = px.area(df, x="Mois de l'année", y="Nombre de questionnaires remplis dans le mois", color="Jour*",line_group="Nombre de questionnaires remplis par jour",color_discrete_sequence= colors,custom_data=[df["Mois"],df["Jour"],df['Nombre de questionnaires remplis par jour'],df['Nombre de questionnaires remplis dans le mois']])
     fig_ann.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0.3)',},height= 500,width= 1420)
-    fig_ann.update_xaxes(categoryorder='array', categoryarray=order_of_months)
+    fig_ann.update_xaxes(categoryorder='array', categoryarray=order_of_months_year("Année"))
     fig_ann.update_traces(hovertemplate="<b>Mois</b>: %{customdata[0]}<br>"
                                         '<b>Jour</b>: %{customdata[1]}<br>'
                                         '<b>Nbre de quest. enregistrés sur le mois</b>: %{customdata[3]}<br>'
                                         "<b>Nbre de quest. enregistrés ce jour</b>: %{customdata[2]}<br>",
                                         hoverlabel=dict(font=dict(size=16, color='white'))),
+
+    st.plotly_chart(fig_ann)
 
     nltk.download('punkt')
 
