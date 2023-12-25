@@ -23,7 +23,7 @@ from pandas.api.types import (
 )
 def dashboard_users(user_zone):
     def base_locale():
-        url= "https://docs.google.com/spreadsheets/d/1yy4k-xZCHWD4fxSkem8hQJ-nut3LyTh3J6-or7_8mRc/edit?hl=fr&pli=1#gid=1054476081"
+        url= "https://docs.google.com/spreadsheets/d/1yy4k-xZCHWD4fxSkem8hQJ-nut3LyTh3J6-or7_8mRc/edit?usp=sharing"
         conn = st.connection("gsheets", type=GSheetsConnection)
         return conn.read(spreadsheet=url)
     
