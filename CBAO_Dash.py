@@ -27,7 +27,7 @@ def dashboard_users(user_zone):
     #Fonction permettant de se connecter à la base de données depuis google sheet
     def base_locale():
         url= "https://docs.google.com/spreadsheets/d/1yy4k-xZCHWD4fxSkem8hQJ-nut3LyTh3J6-or7_8mRc/edit?hl=fr&pli=1#gid=1054476081"
-        conn = st.experimental_connection("gsheets", type=GSheetsConnection)
+        conn = st.connection("gsheets", type=GSheetsConnection)
         return conn.read(spreadsheet=url)
     #Limitation de la base de données en fonction du profil
     if user_zone=='cbao-qualité':
