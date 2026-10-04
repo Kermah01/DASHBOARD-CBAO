@@ -2,12 +2,18 @@
 
 Centralise tout le design : palette validée (daltonisme + contraste, via le
 validateur dataviz, surface #101a30), mise en forme Plotly, nuage de mots et
-CSS global (glassmorphism, fond animé, typographie Google Fonts).
+CSS global (image héros dorée en fond, glassmorphism, typographie).
 
-Ambiance : élégance bancaire premium — bleu nuit profond rehaussé d'or/ambre.
+Ambiance : élégance bancaire premium — vagues de lumière dorées sur bleu nuit.
+L'image ``assets/hero_bg.webp`` est encodée en base64 et sert de fond aux deux
+vues : quasi pure sur l'accueil (overlay léger), affleurante sur le dashboard
+(overlay très opaque pour préserver la lisibilité des graphiques).
 """
 
 from __future__ import annotations
+
+import base64
+from pathlib import Path
 
 import streamlit as st
 from matplotlib.colors import ListedColormap
@@ -43,6 +49,16 @@ ECHELLE_TREEMAP = [[0.0, "#163f78"], [1.0, "#3987e5"]]
 # Nuage de mots : teintes claires du thème, toutes lisibles sur bleu nuit.
 WC_CMAP = ListedColormap(["#86b6ef", "#e8b54d", "#9ec5f4", "#f2cc8f", "#54c49c", "#c9d6ee"])
 WC_FOND = NUIT_SURFACE
+
+# ---------------------------------------------------------------------------
+# Image héros (vagues dorées sur bleu nuit) encodée une seule fois par session
+# ---------------------------------------------------------------------------
+@st.cache_resource(show_spinner=False)
+def _hero_b64() -> str:
+    """Encode ``assets/hero_bg.webp`` en base64 (mise en cache ressource)."""
+    chemin = Path(__file__).resolve().parent / "assets" / "hero_bg.webp"
+    return base64.b64encode(chemin.read_bytes()).decode("ascii")
+
 
 # ---------------------------------------------------------------------------
 # Mise en forme Plotly commune
@@ -81,52 +97,60 @@ def style_fig(fig, titre: str | None = None):
 # CSS — base commune (typographie, verre, boutons, sidebar)
 # ---------------------------------------------------------------------------
 _CSS_BASE = """
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 html, body, [data-testid="stAppViewContainer"] * {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
-h1, h2, h3 {
+/* Streamlit enveloppe le texte des titres dans un span : cibler aussi les
+   descendants, sinon la règle universelle Inter ci-dessus l'emporte. */
+h1, h2, h3, h1 span, h2 span, h3 span {
     font-family: 'Playfair Display', Georgia, serif !important;
     color: #f1e9d6 !important;
     letter-spacing: 0.01em;
 }
 [data-testid="stHeader"] { background: transparent; }
 
-/* ------- Fond de page : nuit profonde + halos fixes ------- */
-.stApp {
-    background:
-        radial-gradient(55rem 38rem at 12% -8%, rgba(57,135,229,0.13), transparent 60%),
-        radial-gradient(48rem 34rem at 90% 108%, rgba(232,181,77,0.10), transparent 62%),
-        linear-gradient(165deg, #060b18 0%, #0a1426 45%, #0d1b36 100%);
-    background-attachment: fixed;
-}
+/* Contenu au-dessus des couches de fond fixes */
+[data-testid="stAppViewContainer"] { position: relative; z-index: 1; }
 
-/* ------- Cartes KPI : glassmorphism ------- */
+/* ------- Cartes KPI : verre bordé d'or ------- */
 [data-testid="stMetric"] {
-    background: linear-gradient(150deg, rgba(255,255,255,0.065), rgba(255,255,255,0.022));
+    background: linear-gradient(150deg, rgba(20,30,54,0.72), rgba(10,16,32,0.60));
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(232,181,77,0.22) !important;
+    border: 1px solid rgba(232,181,77,0.26) !important;
     border-radius: 18px;
-    padding: 1rem 1.15rem;
-    box-shadow: 0 10px 30px rgba(3,8,20,0.45);
+    padding: 1.05rem 1.2rem;
+    box-shadow: 0 10px 30px rgba(3,8,20,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+    position: relative;
+    overflow: hidden;
     transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
 }
-[data-testid="stMetric"]:hover {
-    transform: translateY(-3px);
-    border-color: rgba(232,181,77,0.45) !important;
-    box-shadow: 0 16px 42px rgba(3,8,20,0.60), inset 0 0 0 1px rgba(232,181,77,0.18);
+[data-testid="stMetric"]::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 4%, rgba(232,181,77,0.75), transparent 96%);
+    opacity: 0.8;
 }
-[data-testid="stMetricValue"] {
+[data-testid="stMetric"]:hover {
+    transform: translateY(-4px);
+    border-color: rgba(232,181,77,0.55) !important;
+    box-shadow: 0 18px 46px rgba(3,8,20,0.62), 0 0 26px rgba(232,181,77,0.14),
+                inset 0 0 0 1px rgba(232,181,77,0.16);
+}
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] * {
     font-family: 'Playfair Display', Georgia, serif !important;
     color: #f6e7c6;
+    font-size: 2.1rem;
 }
-[data-testid="stMetricLabel"] { color: #a9b4cc; }
+[data-testid="stMetricLabel"] { color: #c0cadf; font-weight: 600; letter-spacing: 0.015em; }
 
 /* ------- Conteneurs de graphiques : verre léger ------- */
 [data-testid="stPlotlyChart"], [data-testid="stImage"] {
-    background: linear-gradient(160deg, rgba(255,255,255,0.040), rgba(255,255,255,0.015));
+    background: linear-gradient(160deg, rgba(18,28,52,0.62), rgba(9,15,30,0.52));
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255,255,255,0.09);
@@ -136,13 +160,13 @@ h1, h2, h3 {
     transition: border-color .25s ease, box-shadow .25s ease;
 }
 [data-testid="stPlotlyChart"]:hover, [data-testid="stImage"]:hover {
-    border-color: rgba(158,197,244,0.28);
-    box-shadow: 0 12px 34px rgba(3,8,20,0.55);
+    border-color: rgba(232,181,77,0.30);
+    box-shadow: 0 12px 34px rgba(3,8,20,0.55), 0 0 22px rgba(232,181,77,0.08);
 }
 
 /* ------- Tableaux ------- */
 [data-testid="stDataFrame"] {
-    border: 1px solid rgba(255,255,255,0.09);
+    border: 1px solid rgba(232,181,77,0.16);
     border-radius: 14px;
     overflow: hidden;
     box-shadow: 0 8px 24px rgba(3,8,20,0.35);
@@ -190,33 +214,75 @@ h1, h2, h3 {
     box-shadow: 0 6px 26px rgba(232,181,77,0.55);
 }
 
-/* ------- Barre latérale : verre assorti ------- */
+/* ------- Barre latérale : verre assorti, filet doré ------- */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, rgba(13,22,44,0.94), rgba(8,13,27,0.96));
+    background: linear-gradient(180deg, rgba(13,22,44,0.94), rgba(8,13,27,0.97));
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-    border-right: 1px solid rgba(232,181,77,0.15);
+    border-right: 1px solid rgba(232,181,77,0.16);
+    box-shadow: 8px 0 28px rgba(3,8,20,0.35);
 }
 [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
     color: #f2cc8f !important;
 }
 [data-testid="stSidebar"] hr { border-color: rgba(232,181,77,0.18); }
 
-/* ------- Séparateurs de sections : filet doré ------- */
-[data-testid="stHeaderActionElements"] + hr, h2 + hr { border: none; }
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(26px); }
+    to   { opacity: 1; transform: none; }
+}
+"""
+
+# ---------------------------------------------------------------------------
+# CSS — vue dashboard : l'image dorée affleure sous un voile très opaque
+# ---------------------------------------------------------------------------
+_CSS_DASHBOARD = """
+/* ------- Fond : image héros sous un voile nuit quasi opaque ------- */
+.stApp {
+    background:
+        linear-gradient(165deg, rgba(6,10,22,0.92) 0%, rgba(6,10,22,0.95) 55%, rgba(6,10,22,0.97) 100%),
+        url("__HERO__") center / cover no-repeat fixed #060b18;
+}
+
+[data-testid="stAppViewContainer"] .block-container {
+    padding-top: 2.2rem;
+    padding-bottom: 3rem;
+}
+
+/* ------- Fil d'ariane / retour accueil ------- */
+.st-key-btn_retour_haut button {
+    border-radius: 999px;
+    padding: 0.3rem 1.05rem;
+    font-size: 0.85rem;
+    background: rgba(16,26,48,0.55);
+    border: 1px solid rgba(232,181,77,0.30);
+    color: #e9d9ae;
+}
+.dash-crumb {
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #9ec5f4;
+    margin-bottom: 0.55rem;
+}
+.dash-crumb .sep { color: rgba(232,181,77,0.8); margin: 0 0.5rem; }
 
 /* ------- Bannière d'en-tête du dashboard ------- */
 .dash-hero {
     position: relative;
     text-align: center;
-    padding: 1.6rem 1.4rem 1.5rem;
-    border-radius: 20px;
-    background: linear-gradient(150deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    padding: 1.8rem 1.4rem 1.7rem;
+    border-radius: 22px;
+    background:
+        radial-gradient(60rem 16rem at 50% 120%, rgba(232,181,77,0.10), transparent 70%),
+        linear-gradient(150deg, rgba(22,33,60,0.70), rgba(10,16,32,0.55));
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(232,181,77,0.25);
-    box-shadow: 0 14px 40px rgba(3,8,20,0.5);
+    border: 1px solid rgba(232,181,77,0.28);
+    box-shadow: 0 14px 40px rgba(3,8,20,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
     overflow: hidden;
+    animation: fadeUp 0.7s ease both;
 }
 .dash-hero::before {
     content: "";
@@ -227,23 +293,47 @@ h1, h2, h3 {
 }
 .dash-hero h1 {
     margin: 0;
-    font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+    font-size: clamp(1.7rem, 3.6vw, 2.5rem);
     background: linear-gradient(95deg, #f6e3b4 10%, #e8b54d 45%, #9ec5f4 90%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent !important;
+    filter: drop-shadow(0 2px 14px rgba(4,7,16,0.55));
 }
-.dash-hero p { margin: 0.45rem 0 0; color: #a9b4cc; font-size: 0.98rem; }
+.dash-hero p { margin: 0.5rem 0 0; color: #b7c2d9; font-size: 0.98rem; }
+.dash-hero .filet {
+    width: 120px; height: 2px;
+    margin: 0.9rem auto 0;
+    background: linear-gradient(90deg, transparent, rgba(232,181,77,0.9), transparent);
+}
 
-@keyframes fadeUp {
-    from { opacity: 0; transform: translateY(26px); }
-    to   { opacity: 1; transform: none; }
+/* ------- Titres de sections : filets dorés ------- */
+[data-testid="stHeading"] h2 {
+    font-size: 1.45rem;
+    margin-top: 0.4rem;
+}
+[data-testid="stHeading"] hr,
+[data-testid="stHeadingDivider"] {
+    border: none !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, rgba(232,181,77,0.85), rgba(232,181,77,0.25) 45%, transparent 85%) !important;
+}
+[data-testid="stHeading"] h3 { font-size: 1.12rem; color: #e9dec0 !important; }
+
+/* ------- Pied de page ------- */
+.dash-foot {
+    text-align: center;
+    color: #7c8aa5;
+    font-size: 0.82rem;
+    margin-top: 2.6rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid rgba(232,181,77,0.14);
 }
 """
 
 # ---------------------------------------------------------------------------
-# CSS — page d'accueil immersive (fond animé pur CSS, héros, cartes)
+# CSS — page d'accueil cinématographique (image héros plein écran)
 # ---------------------------------------------------------------------------
 _CSS_ACCUEIL = """
 /* Plein écran : pas de barre latérale sur l'accueil */
@@ -252,170 +342,177 @@ section[data-testid="stSidebar"],
 [data-testid="collapsedControl"] { display: none !important; }
 
 [data-testid="stAppViewContainer"] .block-container {
-    padding-top: 2.5rem;
+    padding-top: 2.2rem;
     max-width: 1100px;
 }
 
-/* ------- Fond animé : aurore + blobs lumineux (aucune image) ------- */
-.stApp {
-    background: linear-gradient(-45deg, #060b18, #0b1630, #15224a, #0d1b36, #060b18);
-    background-size: 400% 400%;
-    background-attachment: fixed;
-    animation: aurora 20s ease infinite;
-}
-.stApp::before, .stApp::after {
+/* ------- Fond : image héros plein écran + lente respiration (Ken Burns) ------- */
+.stApp { background: #04070f; }
+.stApp::before {
     content: "";
     position: fixed;
-    border-radius: 50%;
-    filter: blur(90px);
+    inset: -5vmax;
     z-index: 0;
+    background: url("__HERO__") center / cover no-repeat;
+    animation: kenburns 42s ease-in-out infinite alternate;
     pointer-events: none;
 }
-.stApp::before {
-    width: 48vw; height: 48vw;
-    left: -12vw; top: -14vh;
-    background: radial-gradient(circle, rgba(57,135,229,0.34), transparent 65%);
-    animation: blobA 16s ease-in-out infinite alternate;
-}
 .stApp::after {
-    width: 42vw; height: 42vw;
-    right: -10vw; bottom: -16vh;
-    background: radial-gradient(circle, rgba(232,181,77,0.26), transparent 65%);
-    animation: blobB 21s ease-in-out infinite alternate;
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(130% 90% at 50% 8%, transparent 42%, rgba(4,7,16,0.42) 100%),
+        linear-gradient(180deg, rgba(4,7,16,0.35) 0%, rgba(4,7,16,0.40) 55%, rgba(4,7,16,0.55) 100%);
+    pointer-events: none;
 }
-@keyframes aurora {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-@keyframes blobA {
-    from { transform: translate(0, 0) scale(1); }
-    to   { transform: translate(9vw, 7vh) scale(1.18); }
-}
-@keyframes blobB {
-    from { transform: translate(0, 0) scale(1.05); }
-    to   { transform: translate(-8vw, -9vh) scale(0.9); }
+@keyframes kenburns {
+    from { transform: scale(1) translate(0, 0); }
+    to   { transform: scale(1.09) translate(1.2vw, -1vh); }
 }
 
+/* Rideau d'ouverture : fondu depuis le noir (signature cinéma) */
+[data-testid="stAppViewContainer"]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: #04070f;
+    animation: curtain 1.5s ease 0.05s both;
+    pointer-events: none;
+}
+@keyframes curtain { from { opacity: 1; } to { opacity: 0; } }
+
 /* ------- Héros ------- */
-.hero-wrap { position: relative; z-index: 1; text-align: center; padding: 7vh 0.5rem 0.5rem; }
+.hero-wrap { position: relative; z-index: 1; text-align: center; padding: 6.5vh 0.5rem 0.5rem; }
 .hero-eyebrow {
     letter-spacing: 0.45em;
     text-transform: uppercase;
-    color: #9ec5f4;
+    color: #b9d4f7;
     font-size: 0.82rem;
     font-weight: 600;
-    animation: fadeUp 0.9s ease 0.10s both;
+    text-shadow: 0 2px 16px rgba(4,7,16,0.9);
+    animation: fadeUp 0.9s ease 0.35s both;
 }
 .hero-title {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: clamp(2.5rem, 6vw, 4.5rem);
-    font-weight: 700;
-    line-height: 1.12;
-    margin: 1.1rem auto 0.9rem;
-    max-width: 22ch;
-    background: linear-gradient(100deg, #f6e3b4 0%, #e8b54d 28%, #9ec5f4 62%, #f6e3b4 100%);
-    background-size: 250% auto;
+    font-size: clamp(2.7rem, 6.4vw, 4.9rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 1.1rem auto 0.9rem !important;
+    max-width: 21ch;
+    background: linear-gradient(100deg, #fdf3dc 0%, #f2cc8f 30%, #e8b54d 52%, #fdf3dc 76%, #e8b54d 100%);
+    background-size: 220% auto;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    animation: fadeUp 1.1s ease 0.25s both, textShine 9s linear 1.4s infinite;
+    filter: drop-shadow(0 3px 22px rgba(4,7,16,0.75));
+    animation: fadeUp 1.1s ease 0.55s both, textShine 8s linear 2s infinite;
 }
-@keyframes textShine { to { background-position: 250% center; } }
+@keyframes textShine { to { background-position: 220% center; } }
 .hero-sub {
-    color: #c3cde3;
-    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    color: #dde5f3;
+    font-size: clamp(1rem, 1.8vw, 1.22rem);
     max-width: 58ch;
-    margin: 0 auto;
-    line-height: 1.6;
-    animation: fadeUp 1s ease 0.45s both;
+    margin: 0 auto !important;
+    line-height: 1.65;
+    text-shadow: 0 2px 18px rgba(4,7,16,0.95), 0 0 42px rgba(4,7,16,0.8);
+    animation: fadeUp 1s ease 0.8s both;
 }
 .hero-rule {
-    width: 140px; height: 2px;
-    margin: 1.6rem auto 1.2rem;
+    width: 150px; height: 2px;
+    margin: 1.7rem auto 1.25rem;
     background: linear-gradient(90deg, transparent, #e8b54d, transparent);
-    animation: fadeUp 1s ease 0.55s both;
+    box-shadow: 0 0 14px rgba(232,181,77,0.55);
+    animation: fadeUp 1s ease 0.95s both;
 }
 .hero-badge {
     display: inline-block;
-    padding: 0.45rem 1.1rem;
+    padding: 0.45rem 1.15rem;
     border-radius: 999px;
-    background: rgba(232,181,77,0.10);
-    border: 1px solid rgba(232,181,77,0.35);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(10,16,32,0.55);
+    border: 1px solid rgba(232,181,77,0.40);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: #f2cc8f;
     font-size: 0.86rem;
-    animation: fadeUp 1s ease 0.65s both;
+    text-shadow: 0 1px 10px rgba(4,7,16,0.8);
+    animation: fadeUp 1s ease 1.1s both;
 }
 
-/* ------- Cartes de fonctionnalités (verre) ------- */
+/* ------- Cartes de fonctionnalités (verre sur image) ------- */
 .hero-grid {
     display: flex;
     gap: 1.1rem;
     justify-content: center;
     flex-wrap: wrap;
-    margin: 2.3rem auto 1.4rem;
+    margin: 2.4rem auto 1.5rem;
     max-width: 980px;
     position: relative;
     z-index: 1;
-    animation: fadeUp 1s ease 0.8s both;
 }
 .hero-card {
     width: 290px;
     text-align: left;
-    padding: 1.35rem 1.25rem;
+    padding: 1.4rem 1.3rem;
     border-radius: 18px;
-    background: linear-gradient(150deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(255,255,255,0.10);
-    box-shadow: 0 10px 32px rgba(3,8,20,0.45);
-    transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease;
+    background: linear-gradient(155deg, rgba(16,26,48,0.58), rgba(7,12,24,0.46));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(232,181,77,0.20);
+    box-shadow: 0 12px 36px rgba(3,8,20,0.55), inset 0 1px 0 rgba(255,255,255,0.07);
+    transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease;
+    animation: fadeUp 0.95s ease both;
 }
+.hero-card:nth-child(1) { animation-delay: 1.25s; }
+.hero-card:nth-child(2) { animation-delay: 1.4s; }
+.hero-card:nth-child(3) { animation-delay: 1.55s; }
 .hero-card:hover {
-    transform: translateY(-6px);
-    border-color: rgba(232,181,77,0.45);
-    box-shadow: 0 18px 46px rgba(3,8,20,0.65), 0 0 24px rgba(232,181,77,0.12);
+    transform: translateY(-7px);
+    border-color: rgba(232,181,77,0.55);
+    box-shadow: 0 20px 52px rgba(3,8,20,0.7), 0 0 30px rgba(232,181,77,0.16);
 }
-.hero-card .ic { font-size: 1.7rem; }
-.hero-card h3 {
+.hero-card .ic { font-size: 1.7rem; filter: drop-shadow(0 2px 8px rgba(4,7,16,0.6)); }
+.hero-card h3, .hero-card h3 span {
     font-family: 'Inter', sans-serif !important;
     font-size: 1.02rem;
-    color: #f2e7cf !important;
+    color: #f6e9cd !important;
     margin: 0.55rem 0 0.3rem;
 }
-.hero-card p { color: #a9b4cc; font-size: 0.88rem; line-height: 1.5; margin: 0; }
+.hero-card p { color: #c3cde0; font-size: 0.88rem; line-height: 1.5; margin: 0; }
 
-/* ------- Bouton d'entrée (CTA) ------- */
+/* ------- Bouton d'entrée (CTA) : or au halo pulsant ------- */
 div[data-testid="stButton"] { position: relative; z-index: 1; }
 .stButton > button[kind="primary"] {
     width: 100%;
-    padding: 0.9rem 2.4rem;
-    font-size: 1.1rem;
+    padding: 0.95rem 2.4rem;
+    font-size: 1.12rem;
     border-radius: 999px;
     letter-spacing: 0.03em;
-    animation: fadeUp 1s ease 0.95s both, pulseGlow 3.2s ease 2.2s infinite;
+    animation: fadeUp 1s ease 1.75s both, pulseGlow 3.2s ease 3s infinite;
 }
 .stButton > button[kind="primary"]:hover { transform: translateY(-2px) scale(1.02); }
 @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 8px 28px rgba(232,181,77,0.30); }
-    50%      { box-shadow: 0 10px 46px rgba(232,181,77,0.55); }
+    0%, 100% { box-shadow: 0 8px 30px rgba(232,181,77,0.35); }
+    50%      { box-shadow: 0 10px 52px rgba(232,181,77,0.62), 0 0 70px rgba(232,181,77,0.25); }
 }
 .hero-foot {
     text-align: center;
-    color: #7c8aa5;
+    color: #93a1bb;
     font-size: 0.82rem;
-    margin-top: 2.2rem;
+    margin-top: 2.3rem;
     position: relative;
     z-index: 1;
-    animation: fadeUp 1s ease 1.1s both;
+    text-shadow: 0 1px 10px rgba(4,7,16,0.9);
+    animation: fadeUp 1s ease 1.95s both;
 }
 """
 
 
 def inject_css(vue: str = "dashboard") -> None:
     """Injecte le CSS du thème. ``vue`` : « dashboard » ou « accueil »."""
-    css = _CSS_BASE + (_CSS_ACCUEIL if vue == "accueil" else "")
+    css = _CSS_BASE + (_CSS_ACCUEIL if vue == "accueil" else _CSS_DASHBOARD)
+    css = css.replace("__HERO__", f"data:image/webp;base64,{_hero_b64()}")
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)

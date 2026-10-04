@@ -255,7 +255,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
     col1, col2, col3 = st.columns(3)
     delta_quest = df_annee.shape[0] - df_annee[df_annee["Mois*"] <= dec_temp].shape[0]
     col1.metric(
-        f"Questionnaires soumis en {annee}",
+        f"🗳️ Questionnaires soumis en {annee}",
         f"{df_annee.shape[0]:,}".replace(",", " "),
         f"{delta_quest} depuis fin {dec_temp}",
         help="Cochez « Nombre total de questionnaires » dans la barre latérale pour personnaliser le delta.",
@@ -265,25 +265,25 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
     moy_accueil = np.round(df_annee["Note de l'accueil"].mean(), 2)
     if acc_selected == "Modifier le décalage temporel":
         delta_acc = np.round(moy_accueil - df_annee[df_annee["Mois*"] <= dec_temp1]["Note de l'accueil"].mean(), 2)
-        col2.metric(f"Note moyenne de l'accueil en {annee}", f"{moy_accueil} / 5",
+        col2.metric(f"🤝 Note moyenne de l'accueil en {annee}", f"{moy_accueil} / 5",
                     f"{delta_acc} vs cumul à fin {dec_temp1}", border=True)
     elif acc_selected == "Modifier la norme":
-        col2.metric(f"Note moyenne de l'accueil en {annee}", f"{moy_accueil} / 5",
+        col2.metric(f"🤝 Note moyenne de l'accueil en {annee}", f"{moy_accueil} / 5",
                     f"{np.round(moy_accueil - new_norm, 2)} (norme de {new_norm})", border=True)
     else:
-        col2.metric(f"Note moyenne de l'accueil en {annee}", f"{moy_accueil} / 5",
+        col2.metric(f"🤝 Note moyenne de l'accueil en {annee}", f"{moy_accueil} / 5",
                     f"{np.round(moy_accueil - 4, 2)} (norme de 4)", border=True)
 
     moy_pec = np.round(df_annee["Note de la prise en charge"].mean(), 2)
     if pec_selected == "Modifier le décalage temporel ":
         delta_pec = np.round(moy_pec - df_annee[df_annee["Mois*"] <= dec_temp2]["Note de la prise en charge"].mean(), 2)
-        col3.metric(f"Note moyenne de la prise en charge en {annee}", f"{moy_pec} / 5",
+        col3.metric(f"🛎️ Note moyenne de la prise en charge en {annee}", f"{moy_pec} / 5",
                     f"{delta_pec} vs cumul à fin {dec_temp2}", border=True)
     elif pec_selected == "Modifier la norme ":
-        col3.metric(f"Note moyenne de la prise en charge en {annee}", f"{moy_pec} / 5",
+        col3.metric(f"🛎️ Note moyenne de la prise en charge en {annee}", f"{moy_pec} / 5",
                     f"{np.round(moy_pec - new_norm2, 2)} (norme de {new_norm2})", border=True)
     else:
-        col3.metric(f"Note moyenne de la prise en charge en {annee}", f"{moy_pec} / 5",
+        col3.metric(f"🛎️ Note moyenne de la prise en charge en {annee}", f"{moy_pec} / 5",
                     f"{np.round(moy_pec - 4, 2)} (norme de 4)", border=True)
 
     # --------------------------------------------------------------- KPI mensuels
@@ -310,7 +310,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
         delta_mois = int(
             df[df["Mois de l'année"] == last_val].shape[0] - df[df["Mois de l'année"] == start_val].shape[0]
         )
-        st.metric("Questionnaires sur la période", nb_periode,
+        st.metric("🗳️ Questionnaires sur la période", nb_periode,
                   f"{delta_mois} entre {start_val} et {last_val}", border=True)
 
         def nb_avis(masque) -> int:
@@ -320,7 +320,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
             )
 
         delta_avis = nb_avis(df["Mois de l'année"] == last_val) - nb_avis(df["Mois de l'année"] == start_val)
-        st.metric("Avis (motifs) sur la période", nb_avis(masque_periode),
+        st.metric("💬 Avis (motifs) sur la période", nb_avis(masque_periode),
                   f"{delta_avis} entre {start_val} et {last_val}", border=True)
 
         nb_sugg = int(df.loc[masque_periode, "Suggestions"].count())
@@ -328,7 +328,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
             df.loc[df["Mois de l'année"] == last_val, "Suggestions"].count()
             - df.loc[df["Mois de l'année"] == start_val, "Suggestions"].count()
         )
-        st.metric("Suggestions sur la période", nb_sugg,
+        st.metric("💡 Suggestions sur la période", nb_sugg,
                   f"{delta_sugg} entre {start_val} et {last_val}", border=True)
 
     criteres = [

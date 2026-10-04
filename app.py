@@ -120,14 +120,17 @@ def lire_fichier_charge(fichier) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # En-tête + disclaimer
 # ---------------------------------------------------------------------------
+st.button("← Accueil", key="btn_retour_haut", on_click=_retour_accueil, help="Revenir à la page d'accueil")
 st.markdown(
     """
     <div class="dash-hero">
+        <div class="dash-crumb">Accueil <span class="sep">❯</span> Tableau de bord</div>
         <h1>Dashboard Bancaire — Démo</h1>
         <p>
             Analyse de la satisfaction client d'un réseau d'agences bancaires
             (questionnaires « boîte à idées digitale »)
         </p>
+        <div class="filet"></div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -191,6 +194,12 @@ if perimetre != "Direction (toutes les zones)":
     df = df[df["Zone"] == perimetre]
 
 render_dashboard(df)
+
+st.markdown(
+    '<div class="dash-foot">Dashboard « Minuit &amp; Or » — Streamlit · Plotly · pandas · '
+    "données 100 % fictives (graine fixe)</div>",
+    unsafe_allow_html=True,
+)
 
 st.sidebar.divider()
 st.sidebar.caption(
