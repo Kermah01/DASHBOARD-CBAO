@@ -1,0 +1,11 @@
+# Secrets locaux Streamlit — ne jamais committer
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Divers
+.DS_Store
