@@ -3,6 +3,9 @@
 Point d'entrée de l'application Streamlit. Les données affichées sont 100 %
 fictives : elles sont produites par ``generate_synthetic_data.py`` (graine
 fixe) et ne proviennent d'aucun établissement bancaire réel.
+
+L'application s'ouvre sur une page d'accueil immersive (fond animé pur CSS),
+puis bascule vers le dashboard via ``st.session_state``.
 """
 
 import os
@@ -11,15 +14,93 @@ import pandas as pd
 import streamlit as st
 
 from dashboard import render_dashboard
+from theme import inject_css
 
 CHEMIN_DONNEES = os.path.join(os.path.dirname(__file__), "data", "donnees_synthetiques.csv")
 
 st.set_page_config(
     page_title="Dashboard Bancaire — Démo",
-    page_icon="📊",
+    page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+if "vue" not in st.session_state:
+    st.session_state.vue = "accueil"
+
+
+def _aller_au_dashboard() -> None:
+    st.session_state.vue = "dashboard"
+
+
+def _retour_accueil() -> None:
+    st.session_state.vue = "accueil"
+
+
+# ---------------------------------------------------------------------------
+# Page d'accueil immersive
+# ---------------------------------------------------------------------------
+def render_accueil() -> None:
+    inject_css("accueil")
+    st.markdown(
+        """
+        <div class="hero-wrap">
+            <div class="hero-eyebrow">Expérience client · Réseau d'agences</div>
+            <h1 class="hero-title">La satisfaction client, révélée en pleine lumière</h1>
+            <p class="hero-sub">
+                Plongez dans les retours de la boîte à idées digitale d'un réseau
+                d'agences bancaires : indicateurs clés, classements, analyses
+                croisées et exploration des suggestions en texte libre.
+            </p>
+            <div class="hero-rule"></div>
+            <div class="hero-badge">⚠️ Démonstration — données 100 % fictives, générées aléatoirement</div>
+        </div>
+        <div class="hero-grid">
+            <div class="hero-card">
+                <div class="ic">📊</div>
+                <h3>KPI &amp; classements</h3>
+                <p>Volumes de questionnaires, notes moyennes d'accueil et de prise
+                en charge, palmarès des zones et des agences.</p>
+            </div>
+            <div class="hero-card">
+                <div class="ic">🔭</div>
+                <h3>Analyses croisées</h3>
+                <p>Répartitions, histogrammes croisés et évolution mensuelle,
+                filtrables par année, période et périmètre.</p>
+            </div>
+            <div class="hero-card">
+                <div class="ic">💬</div>
+                <h3>Voix du client</h3>
+                <p>Nuage de mots, bigrammes et treemap pour faire parler les
+                suggestions laissées en texte libre.</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    gauche, centre, droite = st.columns([1.2, 1, 1.2])
+    with centre:
+        st.button(
+            "✦ Explorer le dashboard",
+            type="primary",
+            key="cta_explorer",
+            on_click=_aller_au_dashboard,
+            use_container_width=True,
+        )
+    st.markdown(
+        '<div class="hero-foot">Streamlit · Plotly · pandas — projet de démonstration</div>',
+        unsafe_allow_html=True,
+    )
+
+
+if st.session_state.vue == "accueil":
+    render_accueil()
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Vue dashboard
+# ---------------------------------------------------------------------------
+inject_css("dashboard")
 
 
 # ---------------------------------------------------------------------------
@@ -41,10 +122,9 @@ def lire_fichier_charge(fichier) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 st.markdown(
     """
-    <div style="text-align:center;padding:1rem 1.25rem;border-radius:10px;
-                background:#fcfcfb;border:1px solid rgba(11,11,11,0.10);">
-        <h1 style="margin:0;color:#0b0b0b;">Dashboard Bancaire — Démo</h1>
-        <p style="margin:0.35rem 0 0;color:#52514e;">
+    <div class="dash-hero">
+        <h1>Dashboard Bancaire — Démo</h1>
+        <p>
             Analyse de la satisfaction client d'un réseau d'agences bancaires
             (questionnaires « boîte à idées digitale »)
         </p>
@@ -63,8 +143,9 @@ st.warning(
 # ---------------------------------------------------------------------------
 # Barre latérale : source de données + périmètre d'analyse
 # ---------------------------------------------------------------------------
-st.sidebar.title("📊 Dashboard Bancaire")
+st.sidebar.title("🏦 Dashboard Bancaire")
 st.sidebar.caption("Démo — données synthétiques")
+st.sidebar.button("← Retour à l'accueil", key="btn_accueil", on_click=_retour_accueil)
 
 st.sidebar.subheader("Source des données")
 fichier_charge = st.sidebar.file_uploader(

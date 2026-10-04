@@ -21,28 +21,10 @@ from unidecode import unidecode
 from wordcloud import WordCloud
 
 # ---------------------------------------------------------------------------
-# Palette (validée : daltonisme + contraste) et mise en forme Plotly
+# Thème « Minuit & Or » : palette validée (daltonisme + contraste) et mise en
+# forme Plotly centralisées dans theme.py.
 # ---------------------------------------------------------------------------
-PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
-ECHELLE_NOTES = ["#d03b3b", "#fab219", "#0ca30c"]  # mauvais -> bon
-
-LAYOUT_COMMUN = dict(
-    template="plotly_white",
-    plot_bgcolor="rgba(0,0,0,0)",
-    paper_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="system-ui, sans-serif", color="#0b0b0b"),
-    title_x=0.0,
-    margin=dict(l=10, r=10, t=50, b=10),
-)
-
-
-def style_fig(fig, titre: str | None = None):
-    fig.update_layout(**LAYOUT_COMMUN)
-    if titre:
-        fig.update_layout(title=titre)
-    fig.update_xaxes(gridcolor="#e1e0d9", linecolor="#c3c2b7")
-    fig.update_yaxes(gridcolor="#e1e0d9", linecolor="#c3c2b7")
-    return fig
+from theme import ECHELLE_NOTES, ECHELLE_TREEMAP, PALETTE, WC_CMAP, WC_FOND, style_fig
 
 
 # ---------------------------------------------------------------------------
@@ -201,9 +183,10 @@ def nuage_de_mots(commentaires: pd.Series):
         st.info("Pas assez de texte pour générer un nuage de mots.")
         return
     fig_wc, ax = plt.subplots(figsize=(12, 8))
+    fig_wc.patch.set_alpha(0)  # fond transparent : le verre du thème transparaît
     wc = WordCloud(
-        background_color="white",
-        colormap="viridis",
+        background_color=WC_FOND,
+        colormap=WC_CMAP,
         collocations=True,
         width=1200,
         height=750,
@@ -211,7 +194,7 @@ def nuage_de_mots(commentaires: pd.Series):
     ).generate(texte)
     ax.imshow(wc, interpolation="bilinear")
     ax.axis("off")
-    ax.set_title("Nuage de mots des suggestions", fontsize=22)
+    ax.set_title("Nuage de mots des suggestions", fontsize=22, color="#f1e9d6", pad=14)
     st.pyplot(fig_wc)
     plt.close(fig_wc)
 
@@ -228,7 +211,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
     df_complet = df.copy()
 
     # ------------------------------------------------------------------ KPI annuels
-    st.header("KPI annuels", divider="blue")
+    st.header("KPI annuels", divider="orange")
     annee = st.selectbox(
         "Année d'analyse",
         np.sort(df["Année"].unique())[::-1],
@@ -304,7 +287,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
                     f"{np.round(moy_pec - 4, 2)} (norme de 4)", border=True)
 
     # --------------------------------------------------------------- KPI mensuels
-    st.header("KPI mensuels et classements", divider="blue")
+    st.header("KPI mensuels et classements", divider="orange")
     df = df_complet
     mois_annee = df["Mois de l'année"].unique().sort_values(ascending=True)
     defaut = mois_annee[-1]
@@ -364,7 +347,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
         st.dataframe(format_rang(palmares(df, df_annee, "Agence", start_val, last_val, critere1)))
 
     # ------------------------------------------------- Base de données personnalisée
-    st.header("Base de données personnalisée", divider="blue")
+    st.header("Base de données personnalisée", divider="orange")
     df_perso = filter_dataframe(df)
     st.dataframe(df_perso, height=320)
 
@@ -384,7 +367,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
         return
 
     # ------------------------------------------------------------ Analyses graphiques
-    st.header("Analyses graphiques", divider="blue")
+    st.header("Analyses graphiques", divider="orange")
     variables_cat = ["Agence", "Point de contact", "Note de l'accueil",
                      "Note de la prise en charge", "Jour", "Mois", "Zone"]
 
@@ -468,7 +451,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
     )
 
     # ------------------------------------------------------------ Analyse textuelle
-    st.header("Analyse des suggestions (texte libre)", divider="blue")
+    st.header("Analyse des suggestions (texte libre)", divider="orange")
     commentaires = nettoyer_texte(df["Suggestions"], tuple(STOPWORDS_FR))
     compteur = bigrammes(commentaires)
     top_bigrams = dict(sorted(compteur.items(), key=lambda kv: kv[1], reverse=True)[:20])
@@ -486,7 +469,7 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
             ).sort_values("Fréquence")
             fig_big = px.bar(
                 df_big, x="Fréquence", y="Bigramme", orientation="h",
-                color_discrete_sequence=[PALETTE[0]],
+                color_discrete_sequence=[PALETTE[3]],
             )
             fig_big.update_layout(height=520)
             st.plotly_chart(style_fig(fig_big, "Bigrammes les plus fréquents"), width="stretch")
@@ -501,7 +484,8 @@ def render_dashboard(df_brut: pd.DataFrame) -> None:
                 values=valeurs,
                 text=[f"Fréquence : {v}" for v in valeurs],
                 hoverinfo="label+text",
-                marker=dict(colors=valeurs, colorscale=[[0, "#cde2fb"], [1, "#104281"]]),
+                marker=dict(colors=valeurs, colorscale=ECHELLE_TREEMAP),
+                textfont=dict(color="#ffffff"),
             )
         )
         fig_tree.update_layout(height=450)
