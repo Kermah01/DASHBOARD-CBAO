@@ -50,7 +50,7 @@ agences, et d'analyser les verbatims clients.
 
 | Outil | Usage |
 |---|---|
-| Python 3.12 / 3.13 | langage |
+| Python 3.12 / 3.13 / 3.14 | langage |
 | Streamlit 1.44 | interface web interactive |
 | pandas / NumPy | manipulation et agrégation des données |
 | Plotly | graphiques interactifs |
@@ -102,9 +102,9 @@ d'enquête de satisfaction.
 2. Cliquez sur **New app**, puis choisissez ce dépôt, la branche à déployer et le fichier principal `app.py`.
 3. Cliquez sur **Deploy** : l'application est construite puis mise en ligne sur une URL du type `https://<nom-de-l-appli>.streamlit.app`.
 
-> **Version Python** : dans **Advanced settings** (avant le déploiement), choisissez
-> Python 3.12 ou 3.13. Les versions de `requirements.txt` sont épinglées (`==`) et ont
-> été testées sous ces deux versions : le rendu en ligne est ainsi identique au rendu local.
+> **Version Python** : Streamlit Cloud utilise Python 3.14 par défaut (modifiable dans
+> **Advanced settings**). Les versions de `requirements.txt` sont épinglées (`==`) et ont
+> été testées sous Python 3.12, 3.13 et 3.14 : le rendu en ligne est identique au rendu local.
 
 ### Éviter l'hibernation
 
