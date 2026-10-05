@@ -1,12 +1,11 @@
-# Versions épinglées (testées en local sous Python 3.12 et 3.13).
-# Streamlit 1.44.1 : rendu le plus proche de la version d'origine (Streamlit 1.30)
-# tout en restant compatible avec Python 3.12 / 3.13.
+# Versions épinglées, testées sous Python 3.12, 3.13 et 3.14 (Streamlit Cloud utilise 3.14 par défaut).
+# Streamlit 1.44.1 : rendu le plus proche de la version d'origine (Streamlit 1.30).
 streamlit==1.44.1
-pandas==2.2.3
-numpy==2.2.6
+pandas==2.3.3
+numpy==2.3.4
 plotly==6.9.0
-matplotlib==3.9.4
-wordcloud==1.9.4
+matplotlib==3.10.7
+wordcloud==1.9.5
 nltk==3.9.1
 unidecode==1.3.8
 openpyxl==3.1.5
