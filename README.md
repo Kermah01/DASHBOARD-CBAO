@@ -1,60 +1,67 @@
-# 📊 Dashboard Bancaire — Démo
+# 📊 Tableau de bord interactif de la boîte à idées digitale — Démo
 
 Tableau de bord interactif d'analyse de la **satisfaction client d'un réseau
-d'agences bancaires**, construit avec [Streamlit](https://streamlit.io) et
-[Plotly](https://plotly.com/python/).
+d'agences bancaires** (qualité de service), construit avec
+[Streamlit](https://streamlit.io) et [Plotly](https://plotly.com/python/).
 
-> ⚠️ **Données 100 % fictives.** Ce projet est une démonstration à vocation de
-> portfolio : toutes les données (zones, agences, notes, commentaires) sont
-> générées aléatoirement par `generate_synthetic_data.py` avec une graine fixe.
-> Aucune donnée réelle de banque ou de client n'est utilisée.
+> ⚠️ **Données 100 % fictives.** Ce dépôt est la version de démonstration
+> (portfolio) d'un dashboard de pilotage qualité : le design d'origine est
+> conservé (page de connexion animée, fond néon, barre latérale noire et or),
+> mais toutes les données (zones, agences, notes, commentaires) sont générées
+> aléatoirement par `generate_synthetic_data.py` avec une graine fixe. Aucune
+> donnée réelle de banque ou de client n'est utilisée.
+
+**Démo en ligne :** https://dashboard-cbao.streamlit.app
+
+## Comptes de démonstration
+
+Cliquez sur **LOGIN** sur la page d'accueil, puis connectez-vous avec :
+
+| Identifiant | Mot de passe | Périmètre |
+|---|---|---|
+| `direction` | `demo` | toutes les zones |
+| `agence` | `demo` | Zone Centre uniquement |
 
 ## Contexte
 
-Le dashboard simule l'exploitation d'une « boîte à idées digitale » : des
-questionnaires de satisfaction remplis par les clients après un passage en
-agence (note de l'accueil, note de la prise en charge, motifs, suggestions
-libres). Il permet au pilotage qualité de suivre les performances du réseau,
-de comparer zones et agences, et d'analyser les verbatims clients.
+Le dashboard exploite une « boîte à idées digitale » : des questionnaires de
+satisfaction remplis par les clients après un passage en agence (note de
+l'accueil, note de la prise en charge, motifs, suggestions libres). Il permet
+au pilotage qualité de suivre les performances du réseau, de comparer zones et
+agences, et d'analyser les verbatims clients.
 
 ## Fonctionnalités
 
+- **Page de connexion** avec profils : la direction voit tout le réseau, une
+  agence ne voit que sa zone.
 - **KPI annuels** : volume de questionnaires, notes moyennes d'accueil et de
-  prise en charge, avec deltas personnalisables (décalage temporel ou norme
-  cible) depuis la barre latérale.
-- **KPI mensuels** : sélection d'une période glissante (mois à mois), volumes
-  de questionnaires, d'avis et de suggestions avec variations.
-- **Classements dynamiques** : palmarès des zones et des agences selon quatre
-  critères (volumes ou notes moyennes).
-- **Exploration de données** : filtre interactif multi-colonnes (numérique,
-  catégoriel, dates, texte/regex) pour construire une base personnalisée.
-- **Analyses graphiques** : diagramme circulaire, histogrammes, analyses
-  croisées (numérique × numérique, catégoriel × catégoriel), évolution
-  mensuelle en aires empilées — palette harmonisée et accessible (vérifiée
-  pour le daltonisme).
-- **Analyse textuelle des suggestions** : nettoyage du texte (minuscules,
-  accents, stop words), nuage de mots, bigrammes les plus fréquents
-  (histogramme + treemap).
-- **Vues par périmètre** : vue « Direction » (réseau complet) ou restreinte à
-  une zone.
-- **Import optionnel** : possibilité d'analyser son propre fichier CSV/XLSX au
-  même format.
+  prise en charge, avec deltas personnalisables (décalage temporel ou norme)
+  depuis la barre latérale.
+- **KPI mensuels** : sélection d'une période (mois à mois), volumes de
+  questionnaires, d'avis et de suggestions.
+- **Classements** des zones et des agences selon quatre critères.
+- **Base de données personnalisée** : filtre interactif multi-colonnes.
+- **Analyses graphiques** : camembert, histogramme, nuage de points,
+  histogramme croisé (empilé / étalé), évolution mensuelle en aires.
+- **Analyse textuelle des suggestions** : nettoyage du texte, nuage de mots,
+  bigrammes les plus fréquents (histogramme + treemap).
 
 ## Stack technique
 
 | Outil | Usage |
 |---|---|
-| Python 3.11+ | langage |
-| Streamlit | interface web interactive (`st.metric`, cache, thème) |
+| Python 3.12 / 3.13 | langage |
+| Streamlit 1.44 | interface web interactive |
 | pandas / NumPy | manipulation et agrégation des données |
 | Plotly | graphiques interactifs |
 | WordCloud + Matplotlib | nuage de mots |
-| Unidecode | normalisation du texte français |
+| NLTK + Unidecode | bigrammes et normalisation du texte français |
+| openpyxl | lecture de fichiers Excel téléversés |
 
 ## Installation et lancement
 
 ```bash
-# 1. Cloner le dépôt puis installer les dépendances
+# 1. Cloner le dépôt puis installer les dépendances (versions épinglées)
 pip install -r requirements.txt
 
 # 2. (Optionnel) Regénérer les données synthétiques — graine fixe, reproductible
@@ -64,21 +71,23 @@ python generate_synthetic_data.py
 streamlit run app.py
 ```
 
-L'application s'ouvre sur `http://localhost:8501` et charge automatiquement le
-jeu de données de démonstration `data/donnees_synthetiques.csv` (6 000
-questionnaires fictifs répartis sur 2023–2025, 5 zones, 13 agences).
+L'application s'ouvre sur `http://localhost:8501` et charge le jeu de données
+de démonstration `data/donnees_synthetiques.csv` (6 000 questionnaires fictifs
+répartis sur 2023–2025, 5 zones, 13 agences). Les images de fond sont chargées
+depuis leurs URL d'origine (une connexion Internet est nécessaire pour les
+afficher).
 
 ## Structure du projet
 
 ```
-├── app.py                      # Point d'entrée : config, disclaimer, chargement des données
-├── dashboard.py                # Logique du dashboard : KPI, classements, graphiques, NLP
+├── app.py                      # Point d'entrée : page de connexion (fond GIF animé)
+├── dashboard.py                # Dashboard : KPI, classements, graphiques, analyse textuelle
 ├── generate_synthetic_data.py  # Générateur de données fictives (seed fixe)
 ├── data/
 │   └── donnees_synthetiques.csv
 ├── .streamlit/
-│   └── config.toml             # Thème clair sobre
-└── requirements.txt
+│   └── config.toml             # Thème sombre d'origine
+└── requirements.txt            # Versions épinglées (==)
 ```
 
 ## Licence / usage
@@ -93,9 +102,9 @@ d'enquête de satisfaction.
 2. Cliquez sur **New app**, puis choisissez ce dépôt, la branche à déployer et le fichier principal `app.py`.
 3. Cliquez sur **Deploy** : l'application est construite puis mise en ligne sur une URL du type `https://<nom-de-l-appli>.streamlit.app`.
 
-> **Version Python** : dans **Advanced settings** (avant le déploiement), choisissez une
-> version récente de Python (3.11 ou 3.12), compatible avec les versions minimales
-> listées dans `requirements.txt`.
+> **Version Python** : dans **Advanced settings** (avant le déploiement), choisissez
+> Python 3.12 ou 3.13. Les versions de `requirements.txt` sont épinglées (`==`) et ont
+> été testées sous ces deux versions : le rendu en ligne est ainsi identique au rendu local.
 
 ### Éviter l'hibernation
 

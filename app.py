@@ -1,208 +1,103 @@
-"""Dashboard Bancaire — Démo.
 
-Point d'entrée de l'application Streamlit. Les données affichées sont 100 %
-fictives : elles sont produites par ``generate_synthetic_data.py`` (graine
-fixe) et ne proviennent d'aucun établissement bancaire réel.
+#Importation des librairies
+import streamlit as st
+from dashboard import dashboard_users, TOUTES_LES_ZONES
+st.set_page_config(page_title="Dashboard Qualité de Service", layout="wide")
 
-L'application s'ouvre sur une page d'accueil immersive (fond animé pur CSS),
-puis bascule vers le dashboard via ``st.session_state``.
+
+#Chargement de l'image en arrière-plan
+page_bg_img = f"""
+<style>
+[data-testid="stAppViewContainer"] > .main,
+[data-testid="stAppViewContainer"] [data-testid="stMain"] {{
+background-image: url(https://i.ibb.co/Dkf4pYz/c4c29214-c614-4fab-af24-535c0f914889.gif);
+background-size: cover;
+background-position: center;
+background-repeat: no-repeat;
+background-attachment: scroll;
+height: 100vh;
+height: 100dvh;
+margin: 0;
+display: flex;
+
+
+}}
+
+/* Lien d'ancre des titres : hors du flux comme dans la version d'origine (évite un retour à la ligne) */
+.titre-accueil [data-testid="stHeaderActionElements"] {{
+    display: none;
+}}
+
+/* Titres adaptatifs sous 1200 px, comme dans la version de Streamlit d'origine (évite les titres trop grands sur mobile) */
+@media (max-width: 1200px) {{
+    [data-testid="stAppViewContainer"] [data-testid="stMain"] h1 {{
+        font-size: calc(1.4rem + 1.8vw);
+    }}
+    [data-testid="stAppViewContainer"] [data-testid="stMain"] h2 {{
+        font-size: calc(1.35rem + 1.2vw);
+    }}
+    [data-testid="stAppViewContainer"] [data-testid="stMain"] h3 {{
+        font-size: calc(1.3rem + 0.6vw);
+    }}
+}}
+</style>
 """
 
-import os
+st.markdown(page_bg_img, unsafe_allow_html=True)
+st.markdown('<div class="titre-accueil" style="text-align:center;width:100%;"><h1 style="color:black;background-color:#f7a900;border:#fc1c24;border-style:solid;border-radius:5px;">TABLEAU DE BORD INTERACTIF DE LA BOITE A IDEES DIGITALE</h1></div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center;width:100%;"><span style="color:white;background-color:rgba(0,0,0,0.55);border-radius:5px;padding:2px 10px;font-size:0.85rem;">Données fictives — démonstration</span></div>', unsafe_allow_html=True)
 
-import pandas as pd
-import streamlit as st
+#Espacement
+st.write("\n")
+st.write("\n")
+st.write("\n")
+st.write("\n")
+st.write("\n")
+st.write("\n")
+st.write("\n")
 
-from dashboard import render_dashboard
-from theme import inject_css
-
-CHEMIN_DONNEES = os.path.join(os.path.dirname(__file__), "data", "donnees_synthetiques.csv")
-
-st.set_page_config(
-    page_title="Dashboard Bancaire — Démo",
-    page_icon="🏦",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-if "vue" not in st.session_state:
-    st.session_state.vue = "accueil"
-
-
-def _aller_au_dashboard() -> None:
-    st.session_state.vue = "dashboard"
-
-
-def _retour_accueil() -> None:
-    st.session_state.vue = "accueil"
-
-
-# ---------------------------------------------------------------------------
-# Page d'accueil immersive
-# ---------------------------------------------------------------------------
-def render_accueil() -> None:
-    inject_css("accueil")
-    st.markdown(
-        """
-        <div class="hero-wrap">
-            <div class="hero-eyebrow">Expérience client · Réseau d'agences</div>
-            <h1 class="hero-title">La satisfaction client, révélée en pleine lumière</h1>
-            <p class="hero-sub">
-                Plongez dans les retours de la boîte à idées digitale d'un réseau
-                d'agences bancaires : indicateurs clés, classements, analyses
-                croisées et exploration des suggestions en texte libre.
-            </p>
-            <div class="hero-rule"></div>
-            <div class="hero-badge">⚠️ Démonstration — données 100 % fictives, générées aléatoirement</div>
-        </div>
-        <div class="hero-grid">
-            <div class="hero-card">
-                <div class="ic">📊</div>
-                <h3>KPI &amp; classements</h3>
-                <p>Volumes de questionnaires, notes moyennes d'accueil et de prise
-                en charge, palmarès des zones et des agences.</p>
-            </div>
-            <div class="hero-card">
-                <div class="ic">🔭</div>
-                <h3>Analyses croisées</h3>
-                <p>Répartitions, histogrammes croisés et évolution mensuelle,
-                filtrables par année, période et périmètre.</p>
-            </div>
-            <div class="hero-card">
-                <div class="ic">💬</div>
-                <h3>Voix du client</h3>
-                <p>Nuage de mots, bigrammes et treemap pour faire parler les
-                suggestions laissées en texte libre.</p>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    gauche, centre, droite = st.columns([1.2, 1, 1.2])
-    with centre:
-        st.button(
-            "✦ Explorer le dashboard",
-            type="primary",
-            key="cta_explorer",
-            on_click=_aller_au_dashboard,
-            use_container_width=True,
-        )
-    st.markdown(
-        '<div class="hero-foot">Streamlit · Plotly · pandas — projet de démonstration</div>',
-        unsafe_allow_html=True,
-    )
-
-
-if st.session_state.vue == "accueil":
-    render_accueil()
-    st.stop()
-
-# ---------------------------------------------------------------------------
-# Vue dashboard
-# ---------------------------------------------------------------------------
-inject_css("dashboard")
-
-
-# ---------------------------------------------------------------------------
-# Chargement des données
-# ---------------------------------------------------------------------------
-@st.cache_data(show_spinner="Chargement des données de démonstration…")
-def charger_donnees_demo(chemin: str) -> pd.DataFrame:
-    return pd.read_csv(chemin)
-
-
-def lire_fichier_charge(fichier) -> pd.DataFrame:
-    if fichier.name.lower().endswith(".csv"):
-        return pd.read_csv(fichier)
-    return pd.read_excel(fichier, engine="openpyxl")
-
-
-# ---------------------------------------------------------------------------
-# En-tête + disclaimer
-# ---------------------------------------------------------------------------
-st.button("← Accueil", key="btn_retour_haut", on_click=_retour_accueil, help="Revenir à la page d'accueil")
-st.markdown(
-    """
-    <div class="dash-hero">
-        <div class="dash-crumb">Accueil <span class="sep">❯</span> Tableau de bord</div>
-        <h1>Dashboard Bancaire — Démo</h1>
-        <p>
-            Analyse de la satisfaction client d'un réseau d'agences bancaires
-            (questionnaires « boîte à idées digitale »)
-        </p>
-        <div class="filet"></div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-st.warning(
-    "**Données 100 % fictives.** Ce tableau de bord est une démonstration : "
-    "toutes les données (zones, agences, notes, commentaires) sont générées "
-    "aléatoirement par `generate_synthetic_data.py` et ne correspondent à "
-    "aucune banque ni à aucun client réel.",
-    icon="⚠️",
-)
-
-# ---------------------------------------------------------------------------
-# Barre latérale : source de données + périmètre d'analyse
-# ---------------------------------------------------------------------------
-st.sidebar.title("🏦 Dashboard Bancaire")
-st.sidebar.caption("Démo — données synthétiques")
-st.sidebar.button("← Retour à l'accueil", key="btn_accueil", on_click=_retour_accueil)
-
-st.sidebar.subheader("Source des données")
-fichier_charge = st.sidebar.file_uploader(
-    "Analyser votre propre fichier (optionnel)",
-    type=["csv", "xlsx"],
-    help="Le fichier doit contenir les mêmes colonnes que le jeu de démonstration.",
-)
-
-if fichier_charge is not None:
-    try:
-        df = lire_fichier_charge(fichier_charge)
-        st.sidebar.success(f"Fichier chargé : {len(df)} lignes")
-    except Exception as exc:  # fichier illisible -> on retombe sur la démo
-        st.sidebar.error(f"Fichier illisible ({exc}). Données de démo utilisées.")
-        df = charger_donnees_demo(CHEMIN_DONNEES)
-else:
-    df = charger_donnees_demo(CHEMIN_DONNEES)
-
-colonnes_requises = {
-    "Horodateur",
-    "Zone",
-    "Agence",
-    "Point de contact",
-    "Note de l'accueil",
-    "Note de la prise en charge",
-    "Suggestions",
+# Dictionnaire contenant les informations d'identification des utilisateurs autorisés
+# (comptes de démonstration : la direction voit toutes les zones, l'agence ne voit que sa zone)
+users_credentials = {
+    'direction': {'password': 'demo', 'Zone': TOUTES_LES_ZONES},
+    'agence': {'password': 'demo', 'Zone': 'Zone Centre'},
 }
-manquantes = colonnes_requises - set(df.columns)
-if manquantes:
-    st.error(f"Colonnes manquantes dans le fichier : {', '.join(sorted(manquantes))}")
-    st.stop()
 
-# Périmètre : remplace l'ancien système de comptes par zone (démo publique).
-st.sidebar.subheader("Périmètre d'analyse")
-zones = sorted(df["Zone"].dropna().unique().tolist())
-perimetre = st.sidebar.selectbox(
-    "Vue",
-    ["Direction (toutes les zones)"] + zones,
-    help="La vue « Direction » couvre tout le réseau ; une zone restreint "
-    "l'analyse aux agences de cette zone.",
-)
-if perimetre != "Direction (toutes les zones)":
-    df = df[df["Zone"] == perimetre]
+# Fonction pour vérifier les informations d'identification
+def authenticate(username, password):
+    if username in users_credentials and password == users_credentials[username]['password']:
+        return True, users_credentials[username]['Zone']
+    return False, None
 
-render_dashboard(df)
+# Page de login
+with st.expander('LOGIN'):
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
 
-st.markdown(
-    '<div class="dash-foot">Dashboard « Minuit &amp; Or » — Streamlit · Plotly · pandas · '
-    "données 100 % fictives (graine fixe)</div>",
-    unsafe_allow_html=True,
-)
+    if not st.session_state.authenticated:
 
-st.sidebar.divider()
-st.sidebar.caption(
-    "Projet de démonstration — Streamlit · Plotly · pandas. "
-    "Données fictives générées avec une graine fixe."
-)
+        # Formulaire de connexion
+        username = st.text_input("Nom d'utilisateur")
+        password = st.text_input("Mot de passe", type='password')
+        login_button = st.button("Se connecter")
+
+        if login_button:
+            # Vérifier les informations d'identification
+            authenticated, Zone = authenticate(username, password)
+
+            if authenticated:
+                st.session_state.authenticated = True
+                st.session_state.Zone = Zone
+                st.success(f"Connecté en tant que {username} (Zone: {Zone})")
+            else:
+                st.error("Nom d'utilisateur ou mot de passe incorrect")
+
+# Comptes de démonstration affichés sous le formulaire
+if not st.session_state.authenticated:
+    st.markdown('<div style="text-align:center;width:100%;"><p style="color:white;background-color:rgba(0,0,0,0.55);border-radius:5px;padding:8px 12px;display:inline-block;margin-top:8px;">Comptes de démonstration : <b>direction</b> / <b>demo</b> (toutes les zones) — <b>agence</b> / <b>demo</b> (Zone Centre)</p></div>', unsafe_allow_html=True)
+
+# ...
+
+if st.session_state.authenticated:
+    dashboard_users(st.session_state.Zone)
+
